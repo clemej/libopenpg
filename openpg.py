@@ -137,20 +137,23 @@ class openpg(nx.Graph):
 	def bridges(self):
 		ret = []
 		for edge in self.edges_iter():
-			faces = []
-			for face in self.faces:
-				if edge in face.edgelist:
-					faces.append(face)
-			if len(faces) == 2 and not faces[0].visible and \
-							not faces[1].visible:
-				ret.append(edge)
+			if len(self[edge[0]][edge[1]]['faces']) == 2:
+				visible = False
+				for f in self[edge[0]][edge[1]]['faces']:
+					print(edge,f.visible)
+					if f.visible:
+						visible = True
+				if not visible:
+					ret.append(edge)
+
 		return ret
 
 	def branches(self):
 		ret = []
 		for e in [x for x in self.edges_iter() if len(self[x[0]][x[1]].get('faces',[])) == 1]:
-			face = self[e[0]][e[1]]['faces'].pop()
-			self[e[0]][e[1]]['faces'].add(face)
+			for f in self[e[0]][e[1]]['faces']:
+				face = f
+				break
 			if face.visible:
 				continue
 			if nx.degree(self,e[0]) > 1 and nx.degree(self,e[1]) > 1:

@@ -94,7 +94,7 @@ G.add_face(openpg.face(G, edgelist=[
 	], visible=True))
 
 G.print_info()
-print(G.branches())
+print(G.bridges())
 
 # Adding a pendent node
 newnode = openpg.node(G, 99,99)
