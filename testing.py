@@ -1,3 +1,4 @@
+import pprint
 import openpg
 
 #
@@ -15,7 +16,7 @@ for x in range(0,4):
 		node = openpg.node(G, x, y)
 		G.add_node(node)
 
-print G.nodes()
+print(G.nodes())
 
 G.add_edge(G.find_node_xy(0,0), G.find_node_xy(1,0), data={'outer': True})
 G.add_edge(G.find_node_xy(1,0), G.find_node_xy(2,0), data={'outer': True})
@@ -28,17 +29,19 @@ G.add_edge(G.find_node_xy(1,2), G.find_node_xy(2,2), data={'outer': True})
 G.add_edge(G.find_node_xy(2,2), G.find_node_xy(3,2), data={'outer': True})
 
 G.add_edge(G.find_node_xy(0,0), G.find_node_xy(0,1), data={'outer': True})
-G.add_edge(G.find_node_xy(1,0), G.find_node_xy(1,1), data={'outer': True})
+G.add_edge(G.find_node_xy(1,0), G.find_node_xy(1,1))
 G.add_edge(G.find_node_xy(2,0), G.find_node_xy(2,1))
-G.add_edge(G.find_node_xy(3,0), G.find_node_xy(3,1))
+G.add_edge(G.find_node_xy(3,0), G.find_node_xy(3,1), data={'outer': True})
 G.add_edge(G.find_node_xy(0,1), G.find_node_xy(0,2), data={'outer': True})
 G.add_edge(G.find_node_xy(1,1), G.find_node_xy(1,2))
 G.add_edge(G.find_node_xy(2,1), G.find_node_xy(2,2))
 G.add_edge(G.find_node_xy(3,1), G.find_node_xy(3,2), data={'outer': True})
 
-print G.edges()
+print(G.edges())
 
-outer_edges = filter(lambda x: G[x[0]][x[1]].get('outer',False),G.edges_iter())
+outer_edges = [x for x in G.edges_iter() if G[x[0]][x[1]].get('data',{'outer': False}).get('outer',False)]
+#print(G[G.find_node_xy(0,0)][G.find_node_xy(0,1)])
+#print(outer_edges)
 outer_face = openpg.face(G, outer_edges, visible=False, outer=True)
 G.add_face(outer_face)
 
@@ -91,9 +94,25 @@ G.add_face(openpg.face(G, edgelist=[
 	], visible=True))
 
 G.print_info()
-print G.branches()
+print(G.branches())
 
 # Adding a pendent node
-newnode = G.add_node(G, x=99, y=99)
-G.add_edge(G.find_node_xy(0,0), newnode)
+newnode = openpg.node(G, 99,99)
+G.add_node(newnode)
+G.add_edge(G.find_node_xy(1,1), newnode)
+G.faces[1].add_edge(G.find_node_xy(1,1), newnode)
+#G[G.find_node_xy(1,1)][newnode]['faces'].add(G.faces[1])
+
+pend2 = openpg.node(G, 90,90)
+pend3 = openpg.node(G, 80,80)
+G.add_edge(pend2, G.find_node_xy(0,1))
+G.faces[0].add_edge(pend2, G.find_node_xy(0,1))
+G.add_edge(pend3, G.find_node_xy(0,1))
+G.faces[0].add_edge(pend3, G.find_node_xy(0,1))
+
+#print(G.faces[0])
+
+G.print_info()
+pp = pprint.PrettyPrinter(indent=8)
+pp.pprint(G.hinges())
 

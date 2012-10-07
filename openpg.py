@@ -1,5 +1,5 @@
 import networkx as nx
-import cPickle as pickle
+import pprint
 
 # Implement an open planar graph with faces, using the networkx graph library
 # to handle the basic graph functions. 
@@ -54,8 +54,6 @@ class face:
 	def add_edge(self, n1, n2):
 		self.nodelist.add(n1)
 		self.nodelist.add(n2)
-		if not graph[n1][n2].get('faces', None):
-			self.graph[n1][n2]['faces'] = set()
 		self.graph[n1][n2]['faces'].add(self)
 
 	def equal(self, face):
@@ -128,13 +126,13 @@ class openpg(nx.Graph):
 
 	def add_edge(self, n1, n2, **kwargs):
 		nx.Graph.add_edge(self, n1, n2, **kwargs)
+		self[n1][n2]['faces'] = set()
 
 	def outer_face(self):
 		return filter(lambda x: x.outer, self.faces)[0]
 
 	def pendents(self):
-		return filter(lambda x: len(nx.neighbors(self, x)) == 1, 
-							self.nodes_iter())
+		return [x for x in self.nodes_iter() if len(nx.neighbors(self, x)) == 1]
 
 	def bridges(self):
 		ret = []
@@ -150,8 +148,7 @@ class openpg(nx.Graph):
 
 	def branches(self):
 		ret = []
-		for e in filter(lambda x: len(self[x[0]][x[1]]['faces']) == 1,
-							self.edges_iter()):
+		for e in [x for x in self.edges_iter() if len(self[x[0]][x[1]].get('faces',[])) == 1]:
 			face = self[e[0]][e[1]]['faces'].pop()
 			self[e[0]][e[1]]['faces'].add(face)
 			if face.visible:
@@ -162,54 +159,92 @@ class openpg(nx.Graph):
 
 	def hinges(self):
 		ret = []
-		for node in filter(lambda x: nx.degree(self, x) > 3, 
-							self.nodes_iter()):
-
-			#adj_faces = []
-			#for face in self.faces:
-			#	if node in face.nodelist:
-			#		adj_faces.append(face)
-			test = []
-			seen = []
-			neighbors = nx.neighbors(self, node)
-			node2 = neighbors[0]
-
-			while len(seen) < len(neighbors):
-				#print node,node2
-				#print self[node][node2]
-				face = self[node][node2]['faces'].pop()
-				self[node][node2]['faces'].add(face)
-				#while face == self.outer_face():
-				#	face = self[node][node2]['faces'].pop()
-				#	self[node][node2]['faces'].add(face)
-				test.append(face.visible)
-				seen.append(node2)
-
-				node2list = filter(lambda x: x in face.nodelist and x not in seen, neighbors)
-				if len(node2list) > 0:
-					node2 = node2list[0]
-
-			#print node,test
-			newtest = [test[0]]
-			for val in test:
-				if val != newtest[-1]:
-					newtest.append(val)
-			if len(newtest) > 3:
+		possible = self._find_hinges()
+		for node in possible.keys():
+			if len(possible[node]) > 3:
 				ret.append(node)
+			#print("%s: %d" % (node, len(possible[node])))
+		return ret
+
+	def _find_hinges(self):
+		ret = {}
+		for node in [x for x in self.nodes_iter() if nx.degree(self, x) > 3]:
+			#print(node)
+
+			# Will hold a list of tuples:
+			# [visible?, [list of contiguous faces sharing visible?]]
+			result = []
+
+			ordered_neighbors = []
+			neighbors = nx.neighbors(self, node)
+
+			# Take first neighbor node returned to start
+			curnode = neighbors[0]
+
+			# needed bacuse you can't index into sets()
+			for face in self[node][curnode]['faces']:
+				curface = face
+				break
+			
+			curres = [curface.visible, [curface]]
+
+			while len(ordered_neighbors) < len(neighbors):
+				ordered_neighbors.append(curnode)
+
+				# Add/skip an pendent nodes in this face
+				pendent_neighbors_in_face = [x for x in
+					curface.nodelist if x in neighbors and
+					len(self[node][x]['faces']) == 1 and 
+					x not in ordered_neighbors]
+				#print(pendent_neighbors_in_face)
+				ordered_neighbors += pendent_neighbors_in_face
+
+				#print(curface.nodelist)
+				#print(neighbors)
+				#print(ordered_neighbors)
+				newnode = [x for x in curface.nodelist 
+						if x in neighbors and 
+						x not in ordered_neighbors]
+				if len(newnode) == 0:
+					continue
+				else:
+					newnode = newnode[0]
+				for f in self[node][newnode]['faces'] - \
+						self[node][curnode]['faces']:
+					newface = f
+					break
+
+				if newface.visible == curres[0]:
+					curres[1].append(newface)
+				else:
+					result.append(curres)
+					curres = [newface.visible, [newface]]
+
+				curnode = newnode
+				curface = newface
+
+			result.append(curres)
+			
+			#print(node)
+			#print(neighbors)
+			#print(ordered_neighbors)
+			#print(result)
+
+			ret[node] = result
 
 		return ret
 
 	def print_info(self):
-		print 'Nodes = %d' % (self.number_of_nodes())
-		print 'Edges = %d' % (self.number_of_edges())
-		print 'Faces = %d' % (len(self.faces))
-		print 'Visible = (%d/%d)' % \
-			(len(filter(lambda x: x.visible, self.faces)),
-							len(self.faces))
-		print 'Pendent nodes: %d' % len(self.pendents())
-		print 'Bridges: %d' % len(self.bridges())
-		print 'Branches: %d' % len(self.branches())
-		print 'Hinges: %d' % len(self.hinges())
+		print('Nodes = %d' % (self.number_of_nodes()))
+		print('Edges = %d' % (self.number_of_edges()))
+		print('Faces = %d' % (len(self.faces)))
+		print('Visible = (%d/%d)' % \
+			(len([x for x in self.faces if x.visible]),
+							len(self.faces)))
+		print('Pendent nodes: %d' % len(self.pendents()))
+		print('Bridges: %d' % len(self.bridges()))
+		print('Branches: %d' % len(self.branches()))
+		print('Hinges: %d' % len(self.hinges()))
 
 
 	def normalize(self):
@@ -221,6 +256,6 @@ if __name__ == '__main__':
 
 	G = load(sys.argv[1])
 	G.print_info()
-	print G.hinges()
+	print(G.hinges())
 	
 
