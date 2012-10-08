@@ -42,7 +42,6 @@ class face:
 		self.edgelist = []
 		self.nodelist = set()
 		if len(edgelist) > 2:
-			self.edgelist = edgelist
 			for n1,n2 in edgelist:
 				self.add_edge(n1, n2)
 		self.visible = visible
@@ -52,9 +51,19 @@ class face:
 		return 'Face(%s)(%s)' % (self.visible,self.nodelist)
 
 	def add_edge(self, n1, n2):
+		self.edgelist.append((n1,n2))
 		self.nodelist.add(n1)
 		self.nodelist.add(n2)
 		self.graph[n1][n2]['faces'].add(self)
+
+	def remove_node(self, node):
+		self.nodelist.remove(node)
+		newlist = []
+		for e in self.edgelist:
+			if e[0] == node or e[1] == node:
+				continue
+			newlist.append(e)
+		self.edgelist = newlist
 
 	def equal(self, face):
 		if self.graph != face.graph:
@@ -132,7 +141,8 @@ class openpg(nx.Graph):
 		return filter(lambda x: x.outer, self.faces)[0]
 
 	def pendents(self):
-		return [x for x in self.nodes_iter() if len(nx.neighbors(self, x)) == 1]
+		return [x for x in self.nodes_iter() 
+				if len(nx.neighbors(self, x)) == 1]
 
 	def bridges(self):
 		ret = []
@@ -140,7 +150,7 @@ class openpg(nx.Graph):
 			if len(self[edge[0]][edge[1]]['faces']) == 2:
 				visible = False
 				for f in self[edge[0]][edge[1]]['faces']:
-					print(edge,f.visible)
+					#print(edge,f.visible)
 					if f.visible:
 						visible = True
 				if not visible:
@@ -150,92 +160,143 @@ class openpg(nx.Graph):
 
 	def branches(self):
 		ret = []
-		for e in [x for x in self.edges_iter() if len(self[x[0]][x[1]].get('faces',[])) == 1]:
+		for e in [x for x in self.edges_iter() 
+				if len(self[x[0]][x[1]].get('faces',[])) == 1]:
 			for f in self[e[0]][e[1]]['faces']:
 				face = f
 				break
 			if face.visible:
 				continue
-			if nx.degree(self,e[0]) > 1 and nx.degree(self,e[1]) > 1:
+			if nx.degree(self,e[0]) > 1 and \
+					nx.degree(self,e[1]) > 1:
 				ret.append(e)
 		return ret
 
 	def hinges(self):
 		ret = []
-		possible = self._find_hinges()
-		for node in possible.keys():
-			if len(possible[node]) > 3:
+		for node in [x for x in self.nodes_iter() 
+						if nx.degree(self, x) > 3]:
+			result = self._examine_hinge(node)
+			if len(result) > 3:
 				ret.append(node)
-			#print("%s: %d" % (node, len(possible[node])))
-		return ret
+		return ret 
 
-	def _find_hinges(self):
-		ret = {}
-		for node in [x for x in self.nodes_iter() if nx.degree(self, x) > 3]:
-			#print(node)
+	def _examine_hinge(self, node):
+		#print(node)
 
-			# Will hold a list of tuples:
-			# [visible?, [list of contiguous faces sharing visible?]]
-			result = []
+		# Will hold a list of tuples:
+		# [visible?, [list of contig. faces sharing visible?],
+		#   ending node]
+		result = []
 
-			ordered_neighbors = []
-			neighbors = nx.neighbors(self, node)
+		ordered_neighbors = []
+		neighbors = nx.neighbors(self, node)
 
-			# Take first neighbor node returned to start
-			curnode = neighbors[0]
+		# Take first neighbor node returned to start
+		curnode = neighbors[0]
 
-			# needed bacuse you can't index into sets()
-			for face in self[node][curnode]['faces']:
-				curface = face
-				break
+		# needed bacuse you can't index into sets()
+		for face in self[node][curnode]['faces']:
+			curface = face
+			break
 			
-			curres = [curface.visible, [curface]]
+		curres = [curface.visible, [curface], curnode]
 
-			while len(ordered_neighbors) < len(neighbors):
-				ordered_neighbors.append(curnode)
+		while len(ordered_neighbors) < len(neighbors):
+			ordered_neighbors.append(curnode)
 
-				# Add/skip an pendent nodes in this face
-				pendent_neighbors_in_face = [x for x in
+			# Add/skip an pendent nodes in this face
+			pendent_neighbors_in_face = [x for x in
 					curface.nodelist if x in neighbors and
 					len(self[node][x]['faces']) == 1 and 
 					x not in ordered_neighbors]
-				#print(pendent_neighbors_in_face)
-				ordered_neighbors += pendent_neighbors_in_face
+			#print(pendent_neighbors_in_face)
+			ordered_neighbors += pendent_neighbors_in_face
 
-				#print(curface.nodelist)
-				#print(neighbors)
-				#print(ordered_neighbors)
-				newnode = [x for x in curface.nodelist 
-						if x in neighbors and 
-						x not in ordered_neighbors]
-				if len(newnode) == 0:
-					continue
-				else:
-					newnode = newnode[0]
-				for f in self[node][newnode]['faces'] - \
-						self[node][curnode]['faces']:
-					newface = f
-					break
-
-				if newface.visible == curres[0]:
-					curres[1].append(newface)
-				else:
-					result.append(curres)
-					curres = [newface.visible, [newface]]
-
-				curnode = newnode
-				curface = newface
-
-			result.append(curres)
-			
-			#print(node)
+			#print(curface.nodelist)
 			#print(neighbors)
 			#print(ordered_neighbors)
-			#print(result)
+			newnode = [x for x in curface.nodelist 
+						if x in neighbors and 
+						x not in ordered_neighbors]
+			if len(newnode) == 0:
+				# exit condition XXXjc: clean up
+				continue
+			else:
+				newnode = newnode[0]
+			print(node,newnode)
+			print(self[node][newnode]['faces'],self[node][curnode]['faces'])
+			for f in self[node][newnode]['faces'] - \
+					self[node][curnode]['faces']:
+				newface = f
+				break
 
-			ret[node] = result
+			if newface.visible == curres[0]:
+				curres[1].append(newface)
+			else:
+				#curres.append(newnode)
+				result.append(curres)
+				curres = [newface.visible, [newface], newnode]
 
-		return ret
+			curnode = newnode
+			curface = newface
+
+		#curres.append(curnode)
+		result.append(curres)
+			
+		#print(node)
+		#print(neighbors)
+		#print(ordered_neighbors)
+		#print(result)
+		return result
+
+	def eliminate_hinge(self, hinge, marker=1000000):
+		hinfo = self._examine_hinge(hinge)
+
+		# Make sure we're a hinge
+		if len(hinfo) < 4:
+			return
+
+		print(hinfo)
+
+		new_face = face(self, edgelist=[], visible=False)
+
+		for area in hinfo:
+			visible = area[0]
+			# Create a new node
+			newnode = node(self, 
+					marker*(hinfo.index(area)+1)+hinge.x, 
+					marker*(hinfo.index(area)+1)+hinge.y)
+
+			# for each face in this segment, replace node with
+			# newnode
+			for f in area[1]:
+				neighbors = [x for x in f.nodelist 
+					if x in nx.neighbors(self, hinge)]
+				for n in neighbors:
+					self.add_edge(newnode, n)
+					#if newnode.x == 4000002:
+					print(newnode, n)
+					print(self[hinge][n])
+					print(self[newnode][n])
+					# copy existing attributes dict
+					self[newnode][n] = self[hinge][n]
+					self[newnode][n]['faces'].clear()
+
+					f.add_edge(newnode, n)
+					new_face.add_edge(newnode, n)
+					pp = pprint.PrettyPrinter(indent=4, depth=4)
+					#if newnode.x == 4000002:
+					pp.pprint(self[newnode][n])
+				f.remove_node(hinge)
+
+				print(f)
+				print(f.edgelist)
+
+
+		self.add_face(new_face)
+		self.remove_node(hinge)
+		
 
 	def print_info(self):
 		print('Nodes = %d' % (self.number_of_nodes()))

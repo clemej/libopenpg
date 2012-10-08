@@ -42,7 +42,7 @@ print(G.edges())
 outer_edges = [x for x in G.edges_iter() if G[x[0]][x[1]].get('data',{'outer': False}).get('outer',False)]
 #print(G[G.find_node_xy(0,0)][G.find_node_xy(0,1)])
 #print(outer_edges)
-outer_face = openpg.face(G, outer_edges, visible=False, outer=True)
+outer_face = openpg.face(G, edgelist=outer_edges, visible=False, outer=True)
 G.add_face(outer_face)
 
 # f1
@@ -116,3 +116,6 @@ G.print_info()
 pp = pprint.PrettyPrinter(indent=8)
 pp.pprint(G.hinges())
 
+
+G.eliminate_hinge(G.hinges()[0])
+G.print_info()
