@@ -54,7 +54,17 @@ class face:
 		self.edgelist.append((n1,n2))
 		self.nodelist.add(n1)
 		self.nodelist.add(n2)
+		#if len(self.graph[n1][n2]['faces']) == 2:
+			#print ('-------------')
+			#print (self.graph[n1][n2]['faces'])
+			#print (self)
+			#raise(Exception('Adding third face? %s, %s' % (n1, n2)))
 		self.graph[n1][n2]['faces'].add(self)
+		if len(self.graph[n1][n2]['faces']) > 2:
+			print ('-------------')
+			print (self.graph[n1][n2]['faces'])
+			print (self)
+			raise(Exception('Adding third face? %s, %s' % (n1, n2)))
 
 	def remove_node(self, node):
 		self.nodelist.remove(node)
@@ -64,6 +74,29 @@ class face:
 				continue
 			newlist.append(e)
 		self.edgelist = newlist
+
+	def merge(other, bridge):
+		n1,n2 = bridge
+
+		newedgelist = []
+		for e in self.edgelist:
+			if e[0] in [n1,n2] and e[1] in [n1,n2]:
+				continue
+			newedgelist.append(e)
+		self.edgelist = newedgelist
+
+		for e in other.edgelist:
+			if e[0] in [n1,n2] and e[1] in [n1,n2]:
+				continue
+
+			newfaceset = set()
+			for f in self.graph[e[0]][e[1]]['faces']:
+				if f == other:
+					continue
+				newfaceset.add(f)
+			self.graph[e[0]][e[1]]['faces'] = newfaceset
+			self.add_edge(e[0], e[1])
+
 
 	def equal(self, face):
 		if self.graph != face.graph:
@@ -105,6 +138,14 @@ class openpg(nx.Graph):
 
 	def add_face(self, face):
 		self.faces.append(face)
+
+	def remove_face(self, face):
+		newfacelist = []
+		for f in self.faces:
+			if f == face:
+				continue
+			newfacelist.append(f)
+		self.faces = newfacelist
 
 	def find_node(self, n):
 		for needle in self.nodes():
@@ -210,12 +251,8 @@ class openpg(nx.Graph):
 					curface.nodelist if x in neighbors and
 					len(self[node][x]['faces']) == 1 and 
 					x not in ordered_neighbors]
-			#print(pendent_neighbors_in_face)
 			ordered_neighbors += pendent_neighbors_in_face
 
-			#print(curface.nodelist)
-			#print(neighbors)
-			#print(ordered_neighbors)
 			newnode = [x for x in curface.nodelist 
 						if x in neighbors and 
 						x not in ordered_neighbors]
@@ -224,30 +261,30 @@ class openpg(nx.Graph):
 				continue
 			else:
 				newnode = newnode[0]
-			#print(node,newnode)
-			#print(self[node][newnode]['faces'],self[node][curnode]['faces'])
+
+			#print(newnode,curnode)
+			#print(self[node][newnode]['faces'])
+			#print(self[node][curnode]['faces'])
+
+			#print(self[node][newnode]['faces']-self[node][curnode]['faces'])
+
 			for f in self[node][newnode]['faces'] - \
 					self[node][curnode]['faces']:
 				newface = f
 				break
 
+
 			if newface.visible == curres[0]:
 				curres[1].append(newface)
 			else:
-				#curres.append(newnode)
 				result.append(curres)
 				curres = [newface.visible, [newface], newnode]
 
 			curnode = newnode
 			curface = newface
 
-		#curres.append(curnode)
 		result.append(curres)
 			
-		#print(node)
-		#print(neighbors)
-		#print(ordered_neighbors)
-		#print(result)
 		return result
 
 	def eliminate_hinge(self, hinge, marker=1000000):
@@ -279,13 +316,19 @@ class openpg(nx.Graph):
 					#	(newnode, n))
 					self.add_edge(newnode, n)
 					# copy existing attributes dict
-					for k in self[hinge][n].keys():
-						if k != 'faces':
-							continue
-						self[newnode][n][k] = \
-							self[hinge][n][k]
+					# XXXjc: This should be necessary to
+					#        preserve other attributes;
+					#        but it causes weird errors.
+					#for k in self[hinge][n].keys():
+					#	#print(k)
+					#	if k != 'faces':
+					#		continue
+					#	self[newnode][n][k] = \
+					#		self[hinge][n][k]
 
 					#print(self[newnode][n]['faces'])
+					if n.x > 1000:
+						print('n = %s' % n)
 					f.add_edge(newnode, n)
 					new_face.add_edge(newnode, n)
 					#print(self[newnode][n]['faces'])
@@ -300,7 +343,29 @@ class openpg(nx.Graph):
 
 		self.add_face(new_face)
 		self.remove_node(hinge)
-		
+	
+	def eliminate_bridges(self):
+		bridges = self.bridges()
+		print(len(bridges))
+		while(len(bridges) > 0):
+			n1,n2 = bridges[0]
+			print(n1,n2)
+			print(self[n1][n2]['faces'])
+			if self[n1][n2]['faces'][1].outer:
+				kept_face = self[n1][n2]['faces'][1]
+				other_face = self[n1][n2]['faces'][0]
+			else:
+				kept_face = self[n1][n2]['faces'][0]
+				other_face = self[n1][n2]['faces'][1]
+
+			kept_face.merge(other_face, bridge=(n1,n2))
+			self.remove_face(other_face)
+			self.remove_edge(n1,n2)
+
+			bridges = self.bridges()
+			print(len(bridges))
+			break
+
 
 	def print_info(self):
 		print('Nodes = %d' % (self.number_of_nodes()))
