@@ -75,15 +75,18 @@ class face:
 			newlist.append(e)
 		self.edgelist = newlist
 
-	def merge(other, bridge):
-		n1,n2 = bridge
-
+	def remove_edge(self, n1, n2):
 		newedgelist = []
 		for e in self.edgelist:
 			if e[0] in [n1,n2] and e[1] in [n1,n2]:
 				continue
 			newedgelist.append(e)
 		self.edgelist = newedgelist
+
+	def merge(self, other, bridge):
+		n1,n2 = bridge
+
+		self.remove_edge(n1,n2)
 
 		for e in other.edgelist:
 			if e[0] in [n1,n2] and e[1] in [n1,n2]:
@@ -346,25 +349,44 @@ class openpg(nx.Graph):
 	
 	def eliminate_bridges(self):
 		bridges = self.bridges()
-		print(len(bridges))
 		while(len(bridges) > 0):
 			n1,n2 = bridges[0]
-			print(n1,n2)
-			print(self[n1][n2]['faces'])
-			if self[n1][n2]['faces'][1].outer:
-				kept_face = self[n1][n2]['faces'][1]
-				other_face = self[n1][n2]['faces'][0]
-			else:
-				kept_face = self[n1][n2]['faces'][0]
-				other_face = self[n1][n2]['faces'][1]
+			faces = list(self[n1][n2]['faces'])
 
-			kept_face.merge(other_face, bridge=(n1,n2))
+			if faces[1].outer:
+				kept_face = faces[1]
+				other_face = faces[0]
+			else:
+				kept_face = faces[0]
+				other_face = faces[1]
+
+			kept_face.merge(other_face, (n1,n2))
 			self.remove_face(other_face)
 			self.remove_edge(n1,n2)
 
 			bridges = self.bridges()
-			print(len(bridges))
-			break
+			#print(len(bridges))
+
+	def eliminate_pendents(self):
+		pendents = [x for x in self.pendents() if not
+			list(self[x][nx.neighbors(self, x)]['faces'])[0].visible]
+		print(len(pendents))
+
+		while len(pendents) > 0:
+			p = pendents[0]
+
+			edge = (p, nx.neighbors(self, p))
+			face = list(self[edge[0]][edge[1]]['faces'])[0]
+
+			print(edge)
+			print(face)
+
+			face.remove_edge(edge[0], edge[1])
+			self.remove_node(p)
+
+			pendents = [x for x in self.pendents() if not
+				list(self[x][nx.neighbors(self, x)]['faces'])[0].visible]
+			print(len(pendents))
 
 
 	def print_info(self):
@@ -381,7 +403,9 @@ class openpg(nx.Graph):
 
 
 	def normalize(self):
-		pass
+		self.remove_hinges()
+		self.remove_bridges()
+		self.remove_pendents()
 
 
 if __name__ == '__main__':

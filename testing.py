@@ -123,8 +123,14 @@ for edge in G.edges_iter():
 	if len(G[edge[0]][edge[1]]['faces']) == 0:
 		print(edge,G[edge[0]][edge[1]]['faces'])
 
-print('--------------')
+print('----------- Removed hinges')
 
 G.print_info()
-
+print('----------- Removing bridges')
 G.eliminate_bridges()
+G.print_info()
+print('----------- Removeing pendents')
+G.eliminate_pendents()
+G.print_info()
+
+
