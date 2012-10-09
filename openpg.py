@@ -224,8 +224,8 @@ class openpg(nx.Graph):
 				continue
 			else:
 				newnode = newnode[0]
-			print(node,newnode)
-			print(self[node][newnode]['faces'],self[node][curnode]['faces'])
+			#print(node,newnode)
+			#print(self[node][newnode]['faces'],self[node][curnode]['faces'])
 			for f in self[node][newnode]['faces'] - \
 					self[node][curnode]['faces']:
 				newface = f
@@ -257,7 +257,8 @@ class openpg(nx.Graph):
 		if len(hinfo) < 4:
 			return
 
-		print(hinfo)
+		#print(hinge)
+		#print(hinfo)
 
 		new_face = face(self, edgelist=[], visible=False)
 
@@ -265,8 +266,8 @@ class openpg(nx.Graph):
 			visible = area[0]
 			# Create a new node
 			newnode = node(self, 
-					marker*(hinfo.index(area)+1)+hinge.x, 
-					marker*(hinfo.index(area)+1)+hinge.y)
+				marker*(hinfo.index(area)+1)+hinge.x, 
+				marker*(hinfo.index(area)+1)+hinge.y)
 
 			# for each face in this segment, replace node with
 			# newnode
@@ -274,25 +275,28 @@ class openpg(nx.Graph):
 				neighbors = [x for x in f.nodelist 
 					if x in nx.neighbors(self, hinge)]
 				for n in neighbors:
+					#print('creating edge %s, %s' % \
+					#	(newnode, n))
 					self.add_edge(newnode, n)
-					#if newnode.x == 4000002:
-					print(newnode, n)
-					print(self[hinge][n])
-					print(self[newnode][n])
 					# copy existing attributes dict
-					self[newnode][n] = self[hinge][n]
-					self[newnode][n]['faces'].clear()
+					for k in self[hinge][n].keys():
+						if k != 'faces':
+							continue
+						self[newnode][n][k] = \
+							self[hinge][n][k]
 
+					#print(self[newnode][n]['faces'])
 					f.add_edge(newnode, n)
 					new_face.add_edge(newnode, n)
-					pp = pprint.PrettyPrinter(indent=4, depth=4)
+					#print(self[newnode][n]['faces'])
+					#pp = pprint.PrettyPrinter(indent=4, depth=4)
 					#if newnode.x == 4000002:
-					pp.pprint(self[newnode][n])
+					#pp.pprint(self[newnode][n])
+
 				f.remove_node(hinge)
 
-				print(f)
-				print(f.edgelist)
-
+				#print(f)
+				#print(f.edgelist)
 
 		self.add_face(new_face)
 		self.remove_node(hinge)

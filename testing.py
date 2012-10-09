@@ -114,8 +114,13 @@ G.faces[0].add_edge(pend3, G.find_node_xy(0,1))
 
 G.print_info()
 pp = pprint.PrettyPrinter(indent=8)
-pp.pprint(G.hinges())
+#pp.pprint(G.hinges())
 
 
 G.eliminate_hinge(G.hinges()[0])
+
+for edge in G.edges_iter():
+	if len(G[edge[0]][edge[1]]['faces']) == 0:
+		print(edge,G[edge[0]][edge[1]]['faces'])
+
 G.print_info()
