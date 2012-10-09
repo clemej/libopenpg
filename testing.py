@@ -16,7 +16,7 @@ for x in range(0,4):
 		node = openpg.node(G, x, y)
 		G.add_node(node)
 
-print(G.nodes())
+#print(G.nodes())
 
 G.add_edge(G.find_node_xy(0,0), G.find_node_xy(1,0), outer=True)
 G.add_edge(G.find_node_xy(1,0), G.find_node_xy(2,0), outer=True)
@@ -37,7 +37,7 @@ G.add_edge(G.find_node_xy(1,1), G.find_node_xy(1,2))
 G.add_edge(G.find_node_xy(2,1), G.find_node_xy(2,2))
 G.add_edge(G.find_node_xy(3,1), G.find_node_xy(3,2), outer=True)
 
-print(G.edges())
+#print(G.edges())
 
 outer_edges = [x for x in G.edges_iter() if G[x[0]][x[1]].get('outer',False)]
 #print(G[G.find_node_xy(0,0)][G.find_node_xy(0,1)])
@@ -94,7 +94,7 @@ G.add_face(openpg.face(G, edgelist=[
 	], visible=True))
 
 G.print_info()
-print(G.bridges())
+#print(G.bridges())
 
 # Adding a pendent node
 newnode = openpg.node(G, 99,99)
@@ -116,22 +116,27 @@ G.print_info()
 pp = pprint.PrettyPrinter(indent=8)
 #pp.pprint(G.hinges())
 
+print('---------- Normalizing -------------')
+G.normalize()
+G.print_info(verbose=True)
 
-G.eliminate_hinge(G.hinges()[0])
+while True:
+	if len(G.hinges()) > 0:
+		raise Exception('hinges are not 0')
 
-for edge in G.edges_iter():
-	if len(G[edge[0]][edge[1]]['faces']) == 0:
-		print(edge,G[edge[0]][edge[1]]['faces'])
-
-print('----------- Removed hinges')
-
-G.print_info()
-print('----------- Removing bridges')
-G.eliminate_bridges()
-G.print_info()
-print('----------- Removeing pendents')
-G.eliminate_pendents()
-print(G.branches())
-G.print_info()
+#print('----------- Removing hinges')
+#G.eliminate_hinge(G.hinges()[0])
+#
+#for edge in G.edges_iter():
+#	if len(G[edge[0]][edge[1]]['faces']) == 0:
+#		print(edge,G[edge[0]][edge[1]]['faces'])
+#
+#G.print_info()
+#print('----------- Removing bridges')
+#G.eliminate_bridges()
+#G.print_info()
+#print('----------- Removeing pendents')
+#G.eliminate_pendents()
+#G.print_info(verbose=True)
 
 

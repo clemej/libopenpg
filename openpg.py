@@ -96,17 +96,17 @@ class face:
 		self.edgelist.append((n1,n2))
 		self.nodelist.add(n1)
 		self.nodelist.add(n2)
-		#if len(self.graph[n1][n2]['faces']) == 2:
-			#print ('-------------')
-			#print (self.graph[n1][n2]['faces'])
-			#print (self)
-			#raise(Exception('Adding third face? %s, %s' % (n1, n2)))
-		self.graph[n1][n2]['faces'].add(self)
-		if len(self.graph[n1][n2]['faces']) > 2:
+		if len(self.graph[n1][n2]['faces']) == 2:
 			print ('-------------')
 			print (self.graph[n1][n2]['faces'])
 			print (self)
 			raise(Exception('Adding third face? %s, %s' % (n1, n2)))
+		self.graph[n1][n2]['faces'].add(self)
+		#if len(self.graph[n1][n2]['faces']) > 2:
+		#	print ('-------------')
+		#	print (self.graph[n1][n2]['faces'])
+		#	print (self)
+		#	raise(Exception('Adding third face? %s, %s' % (n1, n2)))
 
 	def remove_node(self, node):
 		""" Remove a node and all connected face edges """
@@ -161,7 +161,7 @@ class face:
 			self.graph[e[0]][e[1]]['faces'] = newfaceset
 			#print(self.graph[e[0]][e[1]]['faces'])
 			self.add_edge(e[0], e[1])
-			print(self.graph[e[0]][e[1]]['faces'])
+			#print(self.graph[e[0]][e[1]]['faces'])
 
 
 
@@ -328,10 +328,24 @@ class openpg(nx.Graph):
 	def hinges(self):
 		""" Return a list of all detected hinge nodes """
 		ret = []
+		# Consider a node a /possible/ hing if it meets two criteria:
+		# - it has a degree of at least 3
+		# - it is in two or more visible faces
 		for node in [x for x in self.nodes_iter() 
 						if nx.degree(self, x) > 3]:
-			result = self._examine_hinge(node)
+			
+			adjacent_visible_faces = \
+				[ f for f in self.faces 
+						if node in f.nodelist 
+						and f.visible]
+			#print(adjacent_visible_faces)
+			if len(adjacent_visible_faces) < 2:
+				continue
+
+			result,on = self._examine_hinge(node)
 			if len(result) > 3:
+				#pprint.pprint(on)
+				#pprint.pprint(result)
 				ret.append(node)
 		return ret 
 
@@ -340,8 +354,7 @@ class openpg(nx.Graph):
 		#print(node)
 
 		# Will hold a list of tuples:
-		# [visible?, [list of contig. faces sharing visible?],
-		#   ending node]
+		# [visible?, [list of contig. faces sharing visible?]]
 		result = []
 
 		ordered_neighbors = []
@@ -349,14 +362,15 @@ class openpg(nx.Graph):
 
 		# Take first neighbor node returned to start
 		curnode = neighbors[0]
-
+		#pprint.pprint(curnode)
 		# needed bacuse you can't index into sets()
 		curface = list(self[node][curnode]['faces'])[0]
+		#print (curface)
 		#for face in self[node][curnode]['faces']:
 		#	curface = face
 		#	break
 			
-		curres = [curface.visible, [curface], curnode]
+		curres = [curface.visible, [curface]]
 
 		while len(ordered_neighbors) < len(neighbors):
 			ordered_neighbors.append(curnode)
@@ -366,6 +380,10 @@ class openpg(nx.Graph):
 					curface.nodelist if x in neighbors and
 					len(self[node][x]['faces']) == 1 and 
 					x not in ordered_neighbors]
+			if len(pendent_neighbors_in_face) > 0:
+				#print('pendent neighbors in face: %s' % 
+				#		pendent_neighbors_in_face)
+				pass
 			ordered_neighbors += pendent_neighbors_in_face
 
 			newnode = [x for x in curface.nodelist 
@@ -381,13 +399,9 @@ class openpg(nx.Graph):
 			#print(self[node][newnode]['faces'])
 			#print(self[node][curnode]['faces'])
 
-			if set() == self[node][newnode]['faces'] - self[node][curnode]['faces']:
-				print(node,newnode,curnode)
-				print(self[node][newnode]['faces'] - 
-					self[node][curnode]['faces'])
-
-
-
+			#print(node,newnode,curnode)
+			#print(self[node][newnode]['faces'] - 
+			#		self[node][curnode]['faces'])
 
 			newface = list(self[node][newnode]['faces'] -
 					self[node][curnode]['faces'])[0]
@@ -396,21 +410,38 @@ class openpg(nx.Graph):
 				curres[1].append(newface)
 			else:
 				result.append(curres)
-				curres = [newface.visible, [newface], newnode]
+				curres = [newface.visible, [newface]]
 
 			curnode = newnode
 			curface = newface
 
+		#if len(result) > 0:
+		#	if result[0][0] == curres[0]:
+		#		result[0][1].append(curres[1])
+		#	else:
+		#		result.append(curres)
+		#else:
 		result.append(curres)
-			
-		return result
+	
+		#pprint.pprint (ordered_neighbors)
+		#print (result)
+		return result, ordered_neighbors
+
+	def eliminate_hinges(self):
+		hinges = self.hinges()
+
+		while len(hinges) > 0:
+			h = hinges[0]
+			self.eliminate_hinge(h)
+
+			hinges = self.hinges()
 
 	def eliminate_hinge(self, hinge, marker=1000000):
 		""" 
 		Replace a hinge node with OPG-equivalent represetation, adding
 		new nodes as necessary
 		"""
-		hinfo = self._examine_hinge(hinge)
+		hinfo,on = self._examine_hinge(hinge)
 
 		# Make sure we're a hinge
 		if len(hinfo) < 4:
@@ -449,8 +480,6 @@ class openpg(nx.Graph):
 					#		self[hinge][n][k]
 
 					#print(self[newnode][n]['faces'])
-					if n.x > 1000:
-						print('n = %s' % n)
 					f.add_edge(newnode, n)
 					new_face.add_edge(newnode, n)
 					#print(self[newnode][n]['faces'])
@@ -494,7 +523,7 @@ class openpg(nx.Graph):
 		pendents = [x for x in self.pendents() if not
 			list(self[x][nx.neighbors(self, x)[0]]
 						['faces'])[0].visible]
-		print(len(pendents))
+		#print(len(pendents))
 
 		while len(pendents) > 0:
 			p = pendents[0]
@@ -506,25 +535,37 @@ class openpg(nx.Graph):
 			#print(face)
 
 			face.remove_edge(edge[0], edge[1])
+			self.remove_edge(edge[0], edge[1])
 			self.remove_node(p)
 
 			pendents = [x for x in self.pendents() if not
 				list(self[x][nx.neighbors(self, x)[0]]['faces'])[0].visible]
-			print(pendents)
-			print(len(pendents))
+			#print(pendents)
+			#print(len(pendents))
 
 
-	def print_info(self):
+	def print_info(self, verbose=False):
+		pp = pprint.PrettyPrinter(indent=2, depth=4)
 		print('Nodes = %d' % (self.number_of_nodes()))
 		print('Edges = %d' % (self.number_of_edges()))
 		print('Faces = %d' % (len(self.faces)))
+		if verbose:
+			pp.pprint(self.faces)
 		print('Visible = (%d/%d)' % \
 			(len([x for x in self.faces if x.visible]),
 							len(self.faces)))
 		print('Pendent nodes: %d' % len(self.pendents()))
+		if verbose:
+			pp.pprint(self.pendents())
 		print('Bridges: %d' % len(self.bridges()))
+		if verbose:
+			pp.pprint(self.bridges())
 		print('Branches: %d' % len(self.branches()))
+		if verbose:
+			pp.pprint(self.branches())
 		print('Hinges: %d' % len(self.hinges()))
+		if verbose:
+			pp.pprint(self.hinges())
 
 
 	def normalize(self):
@@ -535,9 +576,9 @@ class openpg(nx.Graph):
 		- Remove all bridges
 		- Remove all pendents edges in non-visible faces
 		"""
-		self.remove_hinges()
-		self.remove_bridges()
-		self.remove_pendents()
+		self.eliminate_hinges()
+		self.eliminate_bridges()
+		self.eliminate_pendents()
 
 
 if __name__ == '__main__':
