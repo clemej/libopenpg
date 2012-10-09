@@ -155,12 +155,14 @@ class face:
 			newfaceset = set()
 			for f in list(self.graph[e[0]][e[1]]['faces']):
 				if f == other:
-					print('removing face %s' % f)
+					#print('removing face %s' % f)
 					continue
 				newfaceset.add(f)
 			self.graph[e[0]][e[1]]['faces'] = newfaceset
 			#print(self.graph[e[0]][e[1]]['faces'])
 			self.add_edge(e[0], e[1])
+			print(self.graph[e[0]][e[1]]['faces'])
+
 
 
 	def equal(self, face):
@@ -376,12 +378,16 @@ class openpg(nx.Graph):
 			else:
 				newnode = newnode[0]
 
-			print(node,newnode,curnode)
-			print(self[node][newnode]['faces'])
-			print(self[node][curnode]['faces'])
+			#print(self[node][newnode]['faces'])
+			#print(self[node][curnode]['faces'])
 
-			print(self[node][newnode]['faces'] - 
+			if set() == self[node][newnode]['faces'] - self[node][curnode]['faces']:
+				print(node,newnode,curnode)
+				print(self[node][newnode]['faces'] - 
 					self[node][curnode]['faces'])
+
+
+
 
 			newface = list(self[node][newnode]['faces'] -
 					self[node][curnode]['faces'])[0]

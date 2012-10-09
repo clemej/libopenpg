@@ -18,28 +18,28 @@ for x in range(0,4):
 
 print(G.nodes())
 
-G.add_edge(G.find_node_xy(0,0), G.find_node_xy(1,0), data={'outer': True})
-G.add_edge(G.find_node_xy(1,0), G.find_node_xy(2,0), data={'outer': True})
-G.add_edge(G.find_node_xy(2,0), G.find_node_xy(3,0), data={'outer': True})
+G.add_edge(G.find_node_xy(0,0), G.find_node_xy(1,0), outer=True)
+G.add_edge(G.find_node_xy(1,0), G.find_node_xy(2,0), outer=True)
+G.add_edge(G.find_node_xy(2,0), G.find_node_xy(3,0), outer=True)
 G.add_edge(G.find_node_xy(0,1), G.find_node_xy(1,1))
 G.add_edge(G.find_node_xy(1,1), G.find_node_xy(2,1))
 G.add_edge(G.find_node_xy(2,1), G.find_node_xy(3,1))
-G.add_edge(G.find_node_xy(0,2), G.find_node_xy(1,2), data={'outer': True})
-G.add_edge(G.find_node_xy(1,2), G.find_node_xy(2,2), data={'outer': True})
-G.add_edge(G.find_node_xy(2,2), G.find_node_xy(3,2), data={'outer': True})
+G.add_edge(G.find_node_xy(0,2), G.find_node_xy(1,2), outer=True)
+G.add_edge(G.find_node_xy(1,2), G.find_node_xy(2,2), outer=True)
+G.add_edge(G.find_node_xy(2,2), G.find_node_xy(3,2), outer=True)
 
-G.add_edge(G.find_node_xy(0,0), G.find_node_xy(0,1), data={'outer': True})
+G.add_edge(G.find_node_xy(0,0), G.find_node_xy(0,1), outer=True)
 G.add_edge(G.find_node_xy(1,0), G.find_node_xy(1,1))
 G.add_edge(G.find_node_xy(2,0), G.find_node_xy(2,1))
-G.add_edge(G.find_node_xy(3,0), G.find_node_xy(3,1), data={'outer': True})
-G.add_edge(G.find_node_xy(0,1), G.find_node_xy(0,2), data={'outer': True})
+G.add_edge(G.find_node_xy(3,0), G.find_node_xy(3,1), outer=True)
+G.add_edge(G.find_node_xy(0,1), G.find_node_xy(0,2), outer=True)
 G.add_edge(G.find_node_xy(1,1), G.find_node_xy(1,2))
 G.add_edge(G.find_node_xy(2,1), G.find_node_xy(2,2))
-G.add_edge(G.find_node_xy(3,1), G.find_node_xy(3,2), data={'outer': True})
+G.add_edge(G.find_node_xy(3,1), G.find_node_xy(3,2), outer=True)
 
 print(G.edges())
 
-outer_edges = [x for x in G.edges_iter() if G[x[0]][x[1]].get('data',{'outer': False}).get('outer',False)]
+outer_edges = [x for x in G.edges_iter() if G[x[0]][x[1]].get('outer',False)]
 #print(G[G.find_node_xy(0,0)][G.find_node_xy(0,1)])
 #print(outer_edges)
 outer_face = openpg.face(G, edgelist=outer_edges, visible=False, outer=True)
