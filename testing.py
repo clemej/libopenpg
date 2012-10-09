@@ -131,6 +131,7 @@ G.eliminate_bridges()
 G.print_info()
 print('----------- Removeing pendents')
 G.eliminate_pendents()
+print(G.branches())
 G.print_info()
 
 
