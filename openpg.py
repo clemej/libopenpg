@@ -427,16 +427,16 @@ class openpg(nx.Graph):
 		#print (result)
 		return result, ordered_neighbors
 
-	def eliminate_hinges(self):
+	def _eliminate_hinges(self):
 		hinges = self.hinges()
 
 		while len(hinges) > 0:
 			h = hinges[0]
-			self.eliminate_hinge(h)
+			self._eliminate_hinge(h)
 
 			hinges = self.hinges()
 
-	def eliminate_hinge(self, hinge, marker=1000000):
+	def _eliminate_hinge(self, hinge, marker=1000000):
 		""" 
 		Replace a hinge node with OPG-equivalent represetation, adding
 		new nodes as necessary
@@ -496,7 +496,7 @@ class openpg(nx.Graph):
 		self.add_face(new_face)
 		self.remove_node(hinge)
 	
-	def eliminate_bridges(self):
+	def _eliminate_bridges(self):
 		""" Remove all bridges """
 		bridges = self.bridges()
 		while(len(bridges) > 0):
@@ -517,7 +517,7 @@ class openpg(nx.Graph):
 			bridges = self.bridges()
 			#print(len(bridges))
 
-	def eliminate_pendents(self):
+	def _eliminate_pendents(self):
 		""" Remove all pendent nodes in non-visible faces """
 		#find each pendent in an invisible face
 		pendents = [x for x in self.pendents() if not
@@ -576,10 +576,88 @@ class openpg(nx.Graph):
 		- Remove all bridges
 		- Remove all pendents edges in non-visible faces
 		"""
-		self.eliminate_hinges()
-		self.eliminate_bridges()
-		self.eliminate_pendents()
+		self._eliminate_hinges()
+		self._eliminate_bridges()
+		self._eliminate_pendents()
 
+	def _get_outer_arcs(self, graph):
+		return [arc for arc in graph.edges() if 
+				graph[arc[0]][arc[1]].get('outer',None)]
+
+	def _check_lemma4(self, f):
+		return True
+
+	def _fixup_edges(self, graph):
+		# 
+		# We need to divide up the edges as to which face the
+		# arc belongs to.  This is needed for the next function.
+		# So, for each edge in the graph, look at the faces attribute
+		# for each opposite arc.  If there is only one face between
+		# them, then both arcs get the same face.  If there are two,
+		# then we need to decide which arc gets which face.  
+		# Faces have the property that there can only be one 
+		# incoming arc and one outgoing arc per node associated with 
+		# each face. 
+		#
+		for arc in graph.edges_iter():
+			if graph[arc[0]][arc[1]].get('difaces', None):
+				continue
+
+			faces = graph[arc[0]][arc[1]]['faces']
+			faces.add(graph[arc[1]][arc[0]]['faces'])
+			print(faces)
+			if len(faces) == 1:
+				graph[arc[0]][arc[1]]['difaces'] = faces
+				graph[arc[1]][arc[0]]['difaces'] = faces
+			else:
+				#len faces == 2
+				face1 = list(faces)[0]
+				
+
+
+	def check_plane_isomorphism(self, other):
+		"""
+		Algorithm 28 from the paper
+		"""
+
+		G = self.to_directed()
+		OG = other.to_directed()
+
+		arc0 = self._get_outer_arcs(G)[0]
+		other_arcs = self._get_outer_arcs(OG)
+
+		for other_arc in other_arcs:
+			f = self._traverse_and_build_matching(G, OG, arc0, 
+								other_arc)
+			if self._check_lemma4(f):
+				return True
+
+		return False
+
+	def _next(self, graph, arc):
+		
+
+	def _opp(self, arc):
+		return ( arc[1], arc[0] )
+
+	def _traverse_and_build_matching(self, graph, other, arc, other_arc):
+		"""
+		Algorithm 29 from the paper
+		"""
+		f = {}
+		f[arc] = other_arc
+		stack = []
+		stack.append(arc)
+		while len(stack) > 0:
+			a = stack.pop()
+			if f.get(self._next(other, a), None) == None:
+				f[self._next(other, a)] = self._next(other,f[a])
+				stack.append(self._next(other, a))
+			if f.get(self._opp(a), None) == None:
+				f[self._opp(a)] = self._opp(f[a])
+				stack.append(self._opp(a))
+		return f
+		
 
 if __name__ == '__main__':
 	import sys

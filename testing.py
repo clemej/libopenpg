@@ -120,23 +120,5 @@ print('---------- Normalizing -------------')
 G.normalize()
 G.print_info(verbose=True)
 
-while True:
-	if len(G.hinges()) > 0:
-		raise Exception('hinges are not 0')
 
-#print('----------- Removing hinges')
-#G.eliminate_hinge(G.hinges()[0])
-#
-#for edge in G.edges_iter():
-#	if len(G[edge[0]][edge[1]]['faces']) == 0:
-#		print(edge,G[edge[0]][edge[1]]['faces'])
-#
-#G.print_info()
-#print('----------- Removing bridges')
-#G.eliminate_bridges()
-#G.print_info()
-#print('----------- Removeing pendents')
-#G.eliminate_pendents()
-#G.print_info(verbose=True)
-
-
+print(G.check_plane_isomorphism(G))
