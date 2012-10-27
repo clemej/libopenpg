@@ -83,7 +83,7 @@ G.add_face(openpg.face(G, edgelist=[
 	(G.find_node_xy(2,1), G.find_node_xy(2,2)),
 	(G.find_node_xy(1,1), G.find_node_xy(2,1)),
 	(G.find_node_xy(1,2), G.find_node_xy(2,2))
-	], visible=False))
+	], visible=True))
 
 # f6
 G.add_face(openpg.face(G, edgelist=[
@@ -116,9 +116,35 @@ G.print_info()
 pp = pprint.PrettyPrinter(indent=8)
 #pp.pprint(G.hinges())
 
+
+print('-----------------------------------')
+G.faces[1].edges_in_order(G.find_node_xy(0,0), G.find_node_xy(1,0), G.find_node_xy(0,0))
+
+#print G.faces[0].edges_in_order(G.find_node_xy(0,0), G.find_node_xy(1,0), G.find_node_xy(0,0))
+
+#G.check_plane_isomorphism(G)
+
 print('---------- Normalizing -------------')
 G.normalize()
 G.print_info(verbose=True)
 
+#G.faces[1].edges_in_order(G.find_node_xy(0,0), G.find_node_xy(1,0), G.find_node_xy(0,0))
 
-print(G.check_plane_isomorphism(G))
+
+#print('----------- Removing hinges')
+#G.eliminate_hinge(G.hinges()[0])
+#
+#for edge in G.edges_iter():
+#	if len(G[edge[0]][edge[1]]['faces']) == 0:
+#		print(edge,G[edge[0]][edge[1]]['faces'])
+#
+#G.print_info()
+#print('----------- Removing bridges')
+#G.eliminate_bridges()
+#G.print_info()
+#print('----------- Removeing pendents')
+#G.eliminate_pendents()
+#G.print_info(verbose=True)
+
+
+G.check_plane_isomorphism(G)

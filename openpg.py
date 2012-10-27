@@ -87,6 +87,7 @@ class face:
 				self.add_edge(n1, n2)
 		self.visible = visible
 		self.outer = outer
+		self.ordered_edges = []
 
 	def __repr__(self):
 		return 'Face(%s)(%s)' % (self.visible,self.nodelist)
@@ -107,6 +108,45 @@ class face:
 		#	print (self.graph[n1][n2]['faces'])
 		#	print (self)
 		#	raise(Exception('Adding third face? %s, %s' % (n1, n2)))
+
+	def node_neighbors(self, node):
+		ret = []
+		for e in self.edgelist:
+			if node in e:
+				ret.append(filter(lambda x: x != node, e)[0])
+		return ret
+
+	def edges_in_order(self, start, node, realstart):
+		if len(self.ordered_edges) > 0:
+			return self.ordered_edges
+
+		ret = [(start, node)]
+
+		if node == realstart:
+			return ret
+
+		# add any pendent nodes from 'node'
+		neighbors = self.node_neighbors(node)
+		filt = [start]
+		for n in neighbors:
+			if len(self.graph[node][n]['faces']) == 1:
+				ret.append((node, n))
+				ret.append((n, node))
+				filt.append(n)	
+
+		neighbors = filter(lambda x: x not in filt, neighbors)
+
+		if realstart in neighbors:
+			neighbors = filter(lambda x: x != realstart, neighbors)
+			neighbors.append(realstart)
+
+		for n in neighbors:
+			r = self.edges_in_order(node, n, realstart)
+			ret += r
+
+		self.ordered_edges = ret
+		return ret
+
 
 	def remove_node(self, node):
 		""" Remove a node and all connected face edges """
@@ -585,7 +625,112 @@ class openpg(nx.Graph):
 				graph[arc[0]][arc[1]].get('outer',None)]
 
 	def _check_lemma4(self, f):
-		return True
+		for k,v in f:
+			print k
+		return False
+
+	def _arc_split_faces(self):
+		pass
+
+	def __update_faces_initial_edge(self, entry, face, initial):
+		if entry[0] == face:
+			entry[1][0] = initial
+		return entry
+
+	def _trace_faces(self, graph, initial):
+		# build up a datastructure that keeps track of each face we've
+		# seen, and the initial edge we used to find it, and whether
+		# we've finished tracing it or not.
+		# something like:
+		# [ [face, [initial, done] , [face2, [initial, done]] ,...]
+		# would like to use a python dict but it is diffcult to use
+		# objects as keys. 
+
+		faces_info = []
+		for f in self.faces:
+			if f is self.outer_face():
+				faces_info.append([f, [initial, False]])
+			else:
+				faces_info.append([f, [None, False]])
+
+		#print initial
+		#print faces_info
+
+		ready_faces = filter(lambda x: x[1][1] == False, faces_info)
+		#print ready_faces
+		while len(ready_faces) > 0:
+			# find first entry that is not done and has an initial
+			# edge
+			#print filter(lambda x: x[1][1] == False, faces_info)
+			for entry in faces_info:
+				if entry[1][0] == None:
+					print 'entry is none, skipping'
+					continue
+				if entry[1][1] == True:
+					print 'entry = True, skipping'
+					continue
+
+				face = entry[0]
+				initedge = entry[1][0]
+
+				edges = face.edges_in_order(initedge[0], 
+						initedge[1], initedge[0])
+
+				#print edges
+
+				for e in edges:
+					if not graph[e[0]][e[1]].get('arcface', None):
+						#print 'working on: ', e
+						graph[e[0]][e[1]]['arcface'] = face
+						
+						other_faces = filter(lambda x: x is not face, list(self[e[0]][e[1]]['faces']))
+						if len(other_faces) == 0:
+							#print 'edge ',e,'is pendent'
+							continue
+
+						other_face = other_faces[0]
+
+						graph[e[1]][e[0]]['arcface'] = other_face
+
+						#print other_face
+
+						#print len(faces_info)
+						for fi in faces_info:
+							#print fi[0]
+							#print fi[0] is other_face
+							#print fi[1][0]
+							if fi[0] is other_face and fi[1][0] == None:
+								#print 'updating face initial edge'
+								fi[1][0] = (e[1], e[0])
+								#print faces_info
+								#sys.exit(0)
+
+						#faces_info = map(lambda x: self.__update_faces_initial_edge(x, other_face, (e[1], e[0])), faces_info)
+						#print faces_info
+						#sys.exit(0)
+						
+						#print [x for x in faces_info if x[0] == other_face]
+
+						#other_entry = filter(lambda x: x[0] == other_face, faces_info)[0]
+						#sys.exit(0)
+						#if other_entry[1][0] == None:
+						#	other_entry[1][0] = (e[1], e[0])
+
+						#if other_face not in map(lambda x: x[0], faces_info):
+						#	faces_info.append([other_face, [ (e[1], e[0]), False ]])
+					else:
+						pass
+						#print 'skipping? why?', e
+				
+				entry[1][1] = True
+
+			#print faces_info
+			ready_faces = filter(lambda x: x[1][1] == False, faces_info)
+			#print len(ready_faces)
+
+
+
+
 
 	def _fixup_edges(self, graph):
 		# 
@@ -599,20 +744,33 @@ class openpg(nx.Graph):
 		# incoming arc and one outgoing arc per node associated with 
 		# each face. 
 		#
-		for arc in graph.edges_iter():
-			if graph[arc[0]][arc[1]].get('difaces', None):
-				continue
 
-			faces = graph[arc[0]][arc[1]]['faces']
-			faces.add(graph[arc[1]][arc[0]]['faces'])
-			print(faces)
-			if len(faces) == 1:
-				graph[arc[0]][arc[1]]['difaces'] = faces
-				graph[arc[1]][arc[0]]['difaces'] = faces
-			else:
-				#len faces == 2
-				face1 = list(faces)[0]
-				
+		# lets try this:
+		#  Start with any outer face and an empty stack
+		#  Set outer face on one of the two directed arcs, and
+		#    the other face to the other arc.  Add other seen face
+		#    to the queue.
+		#  continue to trace outer edge with directed faces, adding
+		#     any new faces to the queue
+		#  when finished with outer, pop face from stack and do that
+		#      face.  
+		#  Finish when stack is empty.
+
+		for initial_edge in self._get_outer_arcs(graph):
+			if len(graph[initial_edge[0]][initial_edge[1]]['faces']) > 1:
+				break
+
+		self._trace_faces(graph, initial_edge)
+		
+		for e in graph.edges_iter():
+			# XXXjc: until I figure out why, some pendent edges don't
+			# get labelled, so fix them here
+			if graph[e[0]][e[1]].get('arcface', None) == None:
+				for f in self.faces:
+					if (e[0], e[1]) in f.edgelist or \
+					    (e[1], e[0]) in f.edgelist:
+						graph[e[0]][e[1]]['arcface'] = f
+
 
 
 	def check_plane_isomorphism(self, other):
@@ -621,7 +779,9 @@ class openpg(nx.Graph):
 		"""
 
 		G = self.to_directed()
+		self._fixup_edges(G)
 		OG = other.to_directed()
+		self._fixup_edges(OG)
 
 		arc0 = self._get_outer_arcs(G)[0]
 		other_arcs = self._get_outer_arcs(OG)
@@ -635,7 +795,17 @@ class openpg(nx.Graph):
 		return False
 
 	def _next(self, graph, arc):
-		
+		#print arc
+		face = graph[arc[0]][arc[1]]['arcface']
+
+		index = 0
+		for edge in face.ordered_edges:
+			if edge[0] == arc[0] and edge[1] == arc[1]:
+				break
+			index = index + 1
+
+		return face.ordered_edges[(index + 1) % len(face.ordered_edges)]
+
 
 	def _opp(self, arc):
 		return ( arc[1], arc[0] )
