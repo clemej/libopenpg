@@ -147,4 +147,4 @@ G.print_info(verbose=True)
 #G.print_info(verbose=True)
 
 
-G.check_plane_isomorphism(G)
+print G.check_plane_isomorphism(G)

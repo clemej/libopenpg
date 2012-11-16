@@ -624,10 +624,26 @@ class openpg(nx.Graph):
 		return [arc for arc in graph.edges() if 
 				graph[arc[0]][arc[1]].get('outer',None)]
 
-	def _check_lemma4(self, f):
-		for k,v in f:
+	def _check_lemma4(self, f, graph, other):
+		p = pprint.PrettyPrinter(indent=4, depth=4)
+		p.pprint(f)
+		#if self._next(other, v) != self._next(graph, k) or \
+		for k in f.keys():
 			print k
-		return False
+			print f[k]
+			#if self._next(other, v) != self._next(graph, k) or \
+			if self._next(other, f[k]) != self._next(graph, k) or \
+				self._opp(f[k]) != self._opp(k):
+				print('next or opp are off')
+				return False
+
+			if graph[k[0]][k[1]]['arcface'].visible != \
+				other[f[k][0]][f[k][1]]['arcface'].visible or \
+			   graph[k[0]][k[1]]['arcface'].outer != \
+				   other[f[k][0]][f[k][1]]['arcface'].outer:
+				print('faces are off')
+				return False
+		return True
 
 	def _arc_split_faces(self):
 		pass
@@ -789,7 +805,7 @@ class openpg(nx.Graph):
 		for other_arc in other_arcs:
 			f = self._traverse_and_build_matching(G, OG, arc0, 
 								other_arc)
-			if self._check_lemma4(f):
+			if self._check_lemma4(f, G, OG):
 				return True
 
 		return False
