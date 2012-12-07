@@ -59,7 +59,7 @@ class node:
 			return False
 
 	def __repr__(self):
-		return '%s:(%d,%d)' % (self.graph, self.x, self.y)
+		return '(%d,%d)' % (self.x, self.y)
 
 	def __iter__(self):
 		return (self.x, self.y)
@@ -694,8 +694,12 @@ class openpg(nx.Graph):
 						initedge[1], initedge[0])
 
 				#print edges
-
+                                print str(graph.nodes()) + '\n'
+                                print graph.edges()
+                                print edges
 				for e in edges:
+                                        print e[0],e[1]
+                                        print graph[e[0]][e[1]]
 					if not graph[e[0]][e[1]].get('arcface', None):
 						#print 'working on: ', e
 						graph[e[0]][e[1]]['arcface'] = face
@@ -796,8 +800,10 @@ class openpg(nx.Graph):
 		"""
 
 		G = self.to_directed()
+                #G = nx.DiGraph(self)
 		self._fixup_edges(G)
 		OG = other.to_directed()
+                #OG = nx.DiGraph(other)
 		self._fixup_edges(OG)
 
 		arc0 = self._get_outer_arcs(G)[0]
