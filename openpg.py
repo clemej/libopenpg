@@ -89,8 +89,8 @@ class face:
 		self.outer = outer
 		self.ordered_edges = []
 
-	def __repr__(self):
-		return 'Face(%s)(%s)' % (self.visible,self.nodelist)
+	#def __repr__(self):
+	#	return 'Face(%s)(%s)' % (self.visible,self.nodelist)
 
 	def add_edge(self, n1, n2):
 		""" Add an edge to an existing face """
@@ -194,7 +194,7 @@ class face:
 
 			newfaceset = set()
 			for f in list(self.graph[e[0]][e[1]]['faces']):
-				if f == other:
+				if f is other:
 					#print('removing face %s' % f)
 					continue
 				newfaceset.add(f)
@@ -251,7 +251,7 @@ class face:
 
 
 
-class openpg(nx.Graph):
+class openpg():
 	""" 
 	A graph structure that implements an Open Planar Graph as
 	described in:
@@ -271,8 +271,14 @@ class openpg(nx.Graph):
 	Functions exist to "normalize" the graph and search for isomorphism. 
 	"""
 	def __init__(self, data=None, name='', **attr):
-		nx.Graph.__init__(self, data=data ,name=name,**attr)
+		self.graph = nx.Graph(data = data, name = name, **attr)
 		self.faces = []
+
+        def to_directed(self):
+                self.graph = nx.DiGraph(self.graph) #self.graph.to_directed()
+
+        def to_undirected(self):
+                self.graph = self.graph.to_undirected()
 
 	def add_face(self, face):
 		""" Adds a face object to the graph """
@@ -282,14 +288,14 @@ class openpg(nx.Graph):
 		""" Removes a face object from the graph """
 		newfacelist = []
 		for f in self.faces:
-			if f == face:
+			if f is face:
 				continue
 			newfacelist.append(f)
 		self.faces = newfacelist
 
 	def find_node(self, n):
 		""" Find and return a particular node """
-		for needle in self.nodes_iter():
+		for needle in self.graph.nodes_iter():
 			if needle.equal(n):
 				return needle
 		return None
@@ -300,7 +306,7 @@ class openpg(nx.Graph):
 
 		This is specific to the above node implementation.
 		"""
-		for needle in self.nodes_iter():
+		for needle in self.graph.nodes_iter():
 			if needle.x == x and needle.y == y:
 				return needle
 
@@ -309,14 +315,14 @@ class openpg(nx.Graph):
 		n1 = self.find_node(node1)
 		n2 = self.find_node(node2)
 
-		if n2 in self.neighbors(n1):
+		if n2 in self.graph.neighbors(n1):
 			return True
 		return False
 
 	def add_node_if_not_dup(self, node):
 		""" Add node only if its not a duplicate """
 		if not self.find_node(node):
-			self.add_node(node)
+			self.graph.add_node(node)
 
 	def add_edge_if_not_dup(self, n1, n2):
 		""" Add edge only it doesn't already exist """
@@ -325,8 +331,17 @@ class openpg(nx.Graph):
 
 	def add_edge(self, n1, n2, **kwargs):
 		""" Add an edge to the graph, initialize faces attribute """
-		nx.Graph.add_edge(self, n1, n2, **kwargs)
-		self[n1][n2]['faces'] = set()
+		self.graph.add_edge(n1, n2, **kwargs)
+		self.graph[n1][n2]['faces'] = set()
+
+        def edges_iter(self):
+                return self.graph.edges_iter()
+
+        def nodes_iter(self):
+                return self.graph.nodes_iter()
+
+        def add_node(self, node):
+                self.graph.add_node(node)
 
 	def outer_face(self):
 		""" Return the outer face """
@@ -334,16 +349,16 @@ class openpg(nx.Graph):
 
 	def pendents(self):
 		""" Return all pendent nodes (regardless of visibility) """
-		return [x for x in self.nodes_iter() 
-				if len(nx.neighbors(self, x)) == 1]
+		return [x for x in self.graph.nodes_iter() 
+				if len(nx.neighbors(self.graph, x)) == 1]
 
 	def bridges(self):
 		""" Return all bridge edges as list of (n1,n2) pairs """
 		ret = []
-		for edge in self.edges_iter():
-			if len(self[edge[0]][edge[1]]['faces']) == 2:
+		for edge in self.graph.edges_iter():
+			if len(self.graph[edge[0]][edge[1]]['faces']) == 2:
 				visible = False
-				for f in self[edge[0]][edge[1]]['faces']:
+				for f in self.graph[edge[0]][edge[1]]['faces']:
 					#print(edge,f.visible)
 					if f.visible:
 						visible = True
@@ -355,13 +370,13 @@ class openpg(nx.Graph):
 	def branches(self):
 		""" Return all branches as list of (n1,n2) pairs """
 		ret = []
-		for e in [x for x in self.edges_iter() 
-				if len(self[x[0]][x[1]].get('faces',[])) == 1]:
-			face = list(self[e[0]][e[1]]['faces'])[0]
+		for e in [x for x in self.graph.edges_iter() 
+				if len(self.graph[x[0]][x[1]].get('faces',[])) == 1]:
+			face = list(self.graph[e[0]][e[1]]['faces'])[0]
 			if face.visible:
 				continue
-			if nx.degree(self,e[0]) > 1 and \
-					nx.degree(self,e[1]) > 1:
+			if nx.degree(self.graph,e[0]) > 1 and \
+					nx.degree(self.graph,e[1]) > 1:
 				ret.append(e)
 		return ret
 
@@ -371,8 +386,8 @@ class openpg(nx.Graph):
 		# Consider a node a /possible/ hing if it meets two criteria:
 		# - it has a degree of at least 3
 		# - it is in two or more visible faces
-		for node in [x for x in self.nodes_iter() 
-						if nx.degree(self, x) > 3]:
+		for node in [x for x in self.graph.nodes_iter() 
+						if nx.degree(self.graph, x) > 3]:
 			
 			adjacent_visible_faces = \
 				[ f for f in self.faces 
@@ -398,13 +413,13 @@ class openpg(nx.Graph):
 		result = []
 
 		ordered_neighbors = []
-		neighbors = nx.neighbors(self, node)
+		neighbors = nx.neighbors(self.graph, node)
 
 		# Take first neighbor node returned to start
 		curnode = neighbors[0]
 		#pprint.pprint(curnode)
 		# needed bacuse you can't index into sets()
-		curface = list(self[node][curnode]['faces'])[0]
+		curface = list(self.graph[node][curnode]['faces'])[0]
 		#print (curface)
 		#for face in self[node][curnode]['faces']:
 		#	curface = face
@@ -418,7 +433,7 @@ class openpg(nx.Graph):
 			# Add/skip an pendent nodes in this face
 			pendent_neighbors_in_face = [x for x in
 					curface.nodelist if x in neighbors and
-					len(self[node][x]['faces']) == 1 and 
+					len(self.graph[node][x]['faces']) == 1 and 
 					x not in ordered_neighbors]
 			if len(pendent_neighbors_in_face) > 0:
 				#print('pendent neighbors in face: %s' % 
@@ -443,8 +458,8 @@ class openpg(nx.Graph):
 			#print(self[node][newnode]['faces'] - 
 			#		self[node][curnode]['faces'])
 
-			newface = list(self[node][newnode]['faces'] -
-					self[node][curnode]['faces'])[0]
+			newface = list(self.graph[node][newnode]['faces'] -
+					self.graph[node][curnode]['faces'])[0]
 
 			if newface.visible == curres[0]:
 				curres[1].append(newface)
@@ -490,12 +505,12 @@ class openpg(nx.Graph):
 		#print(hinge)
 		#print(hinfo)
 
-		new_face = face(self, edgelist=[], visible=False)
+		new_face = face(self.graph, edgelist=[], visible=False)
 
 		for area in hinfo:
 			visible = area[0]
 			# Create a new node
-			newnode = node(self, 
+			newnode = node(self.graph, 
 				marker*(hinfo.index(area)+1)+hinge.x, 
 				marker*(hinfo.index(area)+1)+hinge.y)
 
@@ -503,7 +518,7 @@ class openpg(nx.Graph):
 			# newnode
 			for f in area[1]:
 				neighbors = [x for x in f.nodelist 
-					if x in nx.neighbors(self, hinge)]
+					if x in nx.neighbors(self.graph, hinge)]
 				for n in neighbors:
 					#print('creating edge %s, %s' % \
 					#	(newnode, n))
@@ -541,7 +556,7 @@ class openpg(nx.Graph):
 		bridges = self.bridges()
 		while(len(bridges) > 0):
 			n1,n2 = bridges[0]
-			faces = list(self[n1][n2]['faces'])
+			faces = list(self.graph[n1][n2]['faces'])
 
 			if faces[1].outer:
 				kept_face = faces[1]
@@ -552,7 +567,7 @@ class openpg(nx.Graph):
 
 			kept_face.merge(other_face, (n1,n2))
 			self.remove_face(other_face)
-			self.remove_edge(n1,n2)
+			self.graph.remove_edge(n1,n2)
 
 			bridges = self.bridges()
 			#print(len(bridges))
@@ -561,33 +576,34 @@ class openpg(nx.Graph):
 		""" Remove all pendent nodes in non-visible faces """
 		#find each pendent in an invisible face
 		pendents = [x for x in self.pendents() if not
-			list(self[x][nx.neighbors(self, x)[0]]
+			list(self.graph[x][nx.neighbors(self.graph, x)[0]]
 						['faces'])[0].visible]
 		#print(len(pendents))
 
 		while len(pendents) > 0:
 			p = pendents[0]
 
-			edge = (p, nx.neighbors(self, p)[0])
-			face = list(self[edge[0]][edge[1]]['faces'])[0]
+			edge = (p, nx.neighbors(self.graph, p)[0])
+			face = list(self.graph[edge[0]][edge[1]]['faces'])[0]
 
 			#print(edge)
 			#print(face)
 
 			face.remove_edge(edge[0], edge[1])
-			self.remove_edge(edge[0], edge[1])
-			self.remove_node(p)
+                        face.remove_node(p)
+			self.graph.remove_edge(edge[0], edge[1])
+			self.graph.remove_node(p)
 
 			pendents = [x for x in self.pendents() if not
-				list(self[x][nx.neighbors(self, x)[0]]['faces'])[0].visible]
+				list(self.graph[x][nx.neighbors(self.graph, x)[0]]['faces'])[0].visible]
 			#print(pendents)
 			#print(len(pendents))
 
 
 	def print_info(self, verbose=False):
 		pp = pprint.PrettyPrinter(indent=2, depth=4)
-		print('Nodes = %d' % (self.number_of_nodes()))
-		print('Edges = %d' % (self.number_of_edges()))
+		print('Nodes = %d' % (self.graph.number_of_nodes()))
+		print('Edges = %d' % (self.graph.number_of_edges()))
 		print('Faces = %d' % (len(self.faces)))
 		if verbose:
 			pp.pprint(self.faces)
@@ -620,25 +636,31 @@ class openpg(nx.Graph):
 		self._eliminate_bridges()
 		self._eliminate_pendents()
 
-	def _get_outer_arcs(self, graph):
+	def _get_outer_arcs(self, G):
+                graph = G.graph
 		return [arc for arc in graph.edges() if 
 				graph[arc[0]][arc[1]].get('outer',None)]
 
-	def _check_lemma4(self, f, graph, other, check_outer=True):
+	def _check_lemma4(self, f, G, OG, check_outer=True):
+                graph = G.graph
+                other = OG.graph
 		#p = pprint.PrettyPrinter(indent=4, depth=4)
 		#p.pprint(f)
 		#if self._next(other, v) != self._next(graph, k) or \
 		for k in f.keys():
 			#print k
 			#print f[k]
+                        #print self._next(OG, f[k]), self._next(G, k)
 			#if self._next(other, v) != self._next(graph, k) or \
-			if self._next(other, f[k]) != self._next(graph, k) or \
+			if self._next(OG, f[k]) != self._next(G, k) or \
 				self._opp(f[k]) != self._opp(k):
+                                #print self._next(OG, f[k]), self._next(G, k)
 				print('next or opp are off')
 				return False
 
 			if graph[k[0]][k[1]]['arcface'].visible != \
 					other[f[k][0]][f[k][1]]['arcface'].visible:
+                                print 'visible is off'
 				return False
 			if check_outer and graph[k[0]][k[1]]['arcface'].outer \
 				!= other[f[k][0]][f[k][1]]['arcface'].outer:
@@ -650,11 +672,11 @@ class openpg(nx.Graph):
 		pass
 
 	def __update_faces_initial_edge(self, entry, face, initial):
-		if entry[0] == face:
+		if entry[0] is face:
 			entry[1][0] = initial
 		return entry
 
-	def _trace_faces(self, graph, initial):
+	def _trace_faces(self, G, initial):
 		# build up a datastructure that keeps track of each face we've
 		# seen, and the initial edge we used to find it, and whether
 		# we've finished tracing it or not.
@@ -662,10 +684,12 @@ class openpg(nx.Graph):
 		# [ [face, [initial, done] , [face2, [initial, done]] ,...]
 		# would like to use a python dict but it is diffcult to use
 		# objects as keys. 
+                graph = G.graph
 
 		faces_info = []
-		for f in self.faces:
-			if f is self.outer_face():
+                #print G.faces
+		for f in G.faces:
+			if f is G.outer_face():
 				faces_info.append([f, [initial, False]])
 			else:
 				faces_info.append([f, [None, False]])
@@ -676,15 +700,16 @@ class openpg(nx.Graph):
 		ready_faces = filter(lambda x: x[1][1] == False, faces_info)
 		#print ready_faces
 		while len(ready_faces) > 0:
+                        #print len(ready_faces)
 			# find first entry that is not done and has an initial
 			# edge
 			#print filter(lambda x: x[1][1] == False, faces_info)
 			for entry in faces_info:
 				if entry[1][0] == None:
-					print 'entry is none, skipping'
+				        #print 'entry is none, skipping'
 					continue
 				if entry[1][1] == True:
-					print 'entry = True, skipping'
+					#print 'entry = True, skipping'
 					continue
 
 				face = entry[0]
@@ -693,33 +718,40 @@ class openpg(nx.Graph):
 				edges = face.edges_in_order(initedge[0], 
 						initedge[1], initedge[0])
 
+                                new_faces_info = []
+
 				#print edges
-                                print str(graph.nodes()) + '\n'
-                                print graph.edges()
-                                print edges
+                                #print '======================================'
+                                #print graph.nodes()
+                                #print '--------------------------------------'
+                                #print graph.edges()
+                                #print '--------------------------------------'
+                                #print edges
+                                #print '--------------------------------------'
 				for e in edges:
-                                        print e[0],e[1]
-                                        print graph[e[0]][e[1]]
+                                        #print e[0],e[1]
+                                        #print graph[e[0]][e[1]]
 					if not graph[e[0]][e[1]].get('arcface', None):
 						#print 'working on: ', e
 						graph[e[0]][e[1]]['arcface'] = face
-						
-						other_faces = filter(lambda x: x is not face, list(self[e[0]][e[1]]['faces']))
+					
+                                                #print list(graph[e[0]][e[1]]['faces'])
+						other_faces = filter(lambda x: x is not face, list(graph[e[0]][e[1]]['faces']))
 						if len(other_faces) == 0:
-							#print 'edge ',e,'is pendent'
+							print 'edge ',e,'is pendent'
 							continue
 
+                                                #print 'other_face = ', other_faces
 						other_face = other_faces[0]
 
 						graph[e[1]][e[0]]['arcface'] = other_face
 
-						#print other_face
+						#print 'other_face = ', other_face
 
 						#print len(faces_info)
+                                                #print faces_info
 						for fi in faces_info:
-							#print fi[0]
-							#print fi[0] is other_face
-							#print fi[1][0]
+						        #print fi
 							if fi[0] is other_face and fi[1][0] == None:
 								#print 'updating face initial edge'
 								fi[1][0] = (e[1], e[0])
@@ -744,16 +776,21 @@ class openpg(nx.Graph):
 						#print 'skipping? why?', e
 				
 				entry[1][1] = True
-
+                        #print '=============================================================='
+                        #for fi in faces_info:
+                        #        print fi
 			#print faces_info
 			ready_faces = filter(lambda x: x[1][1] == False, faces_info)
+                        #print ready_faces
 			#print len(ready_faces)
+                        if len(ready_faces):
+                                return
 
 
 
 
 
-	def _fixup_edges(self, graph):
+	def _fixup_edges(self, G):
 		# 
 		# We need to divide up the edges as to which face the
 		# arc belongs to.  This is needed for the next function.
@@ -776,18 +813,18 @@ class openpg(nx.Graph):
 		#  when finished with outer, pop face from stack and do that
 		#      face.  
 		#  Finish when stack is empty.
-
-		for initial_edge in self._get_outer_arcs(graph):
+                graph = G.graph
+		for initial_edge in self._get_outer_arcs(G):
 			if len(graph[initial_edge[0]][initial_edge[1]]['faces']) > 1:
 				break
 
-		self._trace_faces(graph, initial_edge)
+		self._trace_faces(G, initial_edge)
 		
 		for e in graph.edges_iter():
 			# XXXjc: until I figure out why, some pendent edges don't
 			# get labelled, so fix them here
 			if graph[e[0]][e[1]].get('arcface', None) == None:
-				for f in self.faces:
+				for f in G.faces:
 					if (e[0], e[1]) in f.edgelist or \
 					    (e[1], e[0]) in f.edgelist:
 						graph[e[0]][e[1]]['arcface'] = f
@@ -799,49 +836,50 @@ class openpg(nx.Graph):
 		Algorithm 28 from the paper
 		"""
 
-		G = self.to_directed()
+		self.to_directed()
                 #G = nx.DiGraph(self)
-		self._fixup_edges(G)
-		OG = other.to_directed()
+		self._fixup_edges(self)
+		other.to_directed()
                 #OG = nx.DiGraph(other)
-		self._fixup_edges(OG)
+		self._fixup_edges(other)
 
-		arc0 = self._get_outer_arcs(G)[0]
-		other_arcs = self._get_outer_arcs(OG)
+		arc0 = self._get_outer_arcs(self)[0]
+		other_arcs = self._get_outer_arcs(other)
 
 		for other_arc in other_arcs:
-			f = self._traverse_and_build_matching(G, OG, arc0, 
+			f = self._traverse_and_build_matching(self, other, arc0, 
 								other_arc)
-			if self._check_lemma4(f, G, OG):
+			if self._check_lemma4(f, self, other):
 				return True
 
 		return False
 
 	def check_sphere_isomorphism(self, other):
-		G = self.to_directed()
-		self._fixup_edges(G)
-		OG = other.to_directed()
-		self._fixup_edges(OG)
+		self.to_directed()
+		self._fixup_edges(self)
+		other.to_directed()
+		self._fixup_edges(other)
 
-		arc0 = self._get_outer_arcs(G)[0]
-		other_arcs = self._get_outer_arcs(OG)
+		arc0 = self._get_outer_arcs(self)[0]
+		other_arcs = self._get_outer_arcs(other)
 
 		for other_arc in other_arcs:
-			f = self._traverse_and_build_matching(G, OG, arc0, 
+			f = self._traverse_and_build_matching(self, other, arc0, 
 								other_arc)
-			if self._check_lemma4(f, G, OG, check_outer=False):
+			if self._check_lemma4(f, self, other, check_outer=False):
 				return True
 
 		return False
 
 
-	def _next(self, graph, arc):
+	def _next(self, G, arc):
 		#print arc
-		face = graph[arc[0]][arc[1]]['arcface']
+                graph = G.graph
+		face = graph[G.find_node_xy(arc[0].x,arc[0].y)][G.find_node_xy(arc[1].x,arc[1].y)]['arcface']
 
 		index = 0
 		for edge in face.ordered_edges:
-			if edge[0] == arc[0] and edge[1] == arc[1]:
+			if edge[0].equal(arc[0]) and edge[1].equal(arc[1]):
 				break
 			index = index + 1
 

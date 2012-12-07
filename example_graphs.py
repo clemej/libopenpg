@@ -42,15 +42,16 @@ def example_graph1(name='square6'):
         #print(G.edges())
 
         outer_edges = \
-                [x for x in G.edges_iter() if G[x[0]][x[1]].get('outer',False)]
+                [x for x in G.edges_iter() if 
+                                        G.graph[x[0]][x[1]].get('outer',False)]
         #print(G[G.find_node_xy(0,0)][G.find_node_xy(0,1)])
         #print(outer_edges)
         outer_face = \
-                openpg.face(G, edgelist=outer_edges, visible=False, outer=True)
+                openpg.face(G.graph, edgelist=outer_edges, visible=False, outer=True)
         G.add_face(outer_face)
 
         # f1
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(0,0), G.find_node_xy(0,1)),
         	(G.find_node_xy(1,0), G.find_node_xy(1,1)),
         	(G.find_node_xy(0,0), G.find_node_xy(1,0)),
@@ -58,7 +59,7 @@ def example_graph1(name='square6'):
         	], visible=True))
 
         # f2
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(1,0), G.find_node_xy(1,1)),
         	(G.find_node_xy(2,0), G.find_node_xy(2,1)),
         	(G.find_node_xy(1,0), G.find_node_xy(2,0)),
@@ -66,7 +67,7 @@ def example_graph1(name='square6'):
         	], visible=True))
 
         # f3
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(3,0), G.find_node_xy(3,1)),
         	(G.find_node_xy(2,0), G.find_node_xy(2,1)),
         	(G.find_node_xy(2,0), G.find_node_xy(3,0)),
@@ -74,7 +75,7 @@ def example_graph1(name='square6'):
         	], visible=False))
 
         # f4
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(0,1), G.find_node_xy(0,2)),
         	(G.find_node_xy(1,1), G.find_node_xy(1,2)),
         	(G.find_node_xy(0,1), G.find_node_xy(1,1)),
@@ -82,7 +83,7 @@ def example_graph1(name='square6'):
         	], visible=False))
 
         # f5
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(1,1), G.find_node_xy(1,2)),
         	(G.find_node_xy(2,1), G.find_node_xy(2,2)),
         	(G.find_node_xy(1,1), G.find_node_xy(2,1)),
@@ -90,7 +91,7 @@ def example_graph1(name='square6'):
         	], visible=True))
 
         # f6
-        G.add_face(openpg.face(G, edgelist=[
+        G.add_face(openpg.face(G.graph, edgelist=[
         	(G.find_node_xy(3,1), G.find_node_xy(3,2)),
         	(G.find_node_xy(2,1), G.find_node_xy(2,2)),
         	(G.find_node_xy(2,1), G.find_node_xy(3,1)),
