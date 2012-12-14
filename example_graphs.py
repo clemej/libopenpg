@@ -106,18 +106,18 @@ def example_graph2():
         """
         G = example_graph1(name='square6-extras')
         # Adding a pendent node
-        newnode = openpg.node(G, 99,99)
-        G.add_node(newnode)
-        G.add_edge(G.find_node_xy(1,1), newnode)
-        G.faces[1].add_edge(G.find_node_xy(1,1), newnode)
+        #newnode = openpg.node(G, 99,99)
+        #G.add_node(newnode)
+        #G.add_edge(G.find_node_xy(1,1), newnode)
+        #G.faces[1].add_edge(G.find_node_xy(1,1), newnode)
         #G[G.find_node_xy(1,1)][newnode]['faces'].add(G.faces[1])
 
-        pend2 = openpg.node(G, 90,90)
-        pend3 = openpg.node(G, 80,80)
-        G.add_edge(pend2, G.find_node_xy(0,1))
-        G.faces[0].add_edge(pend2, G.find_node_xy(0,1))
-        G.add_edge(pend3, G.find_node_xy(0,1))
-        G.faces[0].add_edge(pend3, G.find_node_xy(0,1))
+        #pend2 = openpg.node(G, 90,90)
+        #pend3 = openpg.node(G, 80,80)
+        #G.add_edge(pend2, G.find_node_xy(0,1))
+        #G.faces[0].add_edge(pend2, G.find_node_xy(0,1))
+        #G.add_edge(pend3, G.find_node_xy(0,1))
+        #G.faces[0].add_edge(pend3, G.find_node_xy(0,1))
 
         #print(G.faces[0])
         return G
