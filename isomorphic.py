@@ -13,7 +13,6 @@ def _check_lemma4(f, G, OG, check_outer=True):
 	#p.pprint(f)
 	#if self._next(other, v) != self._next(graph, k) or \
         #print f
-        print '-------------------------------------------------'
 	for k in f.keys():
 		#print k
 		#print f[k]
@@ -23,8 +22,8 @@ def _check_lemma4(f, G, OG, check_outer=True):
                 gnext = f[_next(G, k)]
                 ogopp = _opp(f[k])
                 gopp = f[_opp(k)]
-                print 'next: ', ognext, gnext 
-                print 'opp : ',ogopp, gopp
+                #print 'next: ', ognext, gnext 
+                #print 'opp : ',ogopp, gopp
 
                 #print 'next: ', ognext[0].equiv(gnext[0]) and ognext[1].equiv(gnext[1])
                 #print 'opp: ', ogopp[0].equiv(gopp[0]) and ogopp[1].equiv(gopp[1])
@@ -32,22 +31,22 @@ def _check_lemma4(f, G, OG, check_outer=True):
 		#if _next(OG, f[k]) != _next(G, k) or _opp(f[k]) != _opp(k):
                 if ognext[0] is not gnext[0] or ognext[1] is not gnext[1]:
                         #print self._next(OG, f[k]), self._next(G, k)
-        		print('next is off')
+        		#print('next is off')
 			return False
 
                 if ogopp[0] is not gopp[0] or ogopp[1] is not gopp[1]:
-                        print('opp is off')
+                        #print('opp is off')
                         return False
 
 		if graph[k[0]][k[1]]['arcface'].visible != \
 				other[f[k][0]][f[k][1]]['arcface'].visible:
-                        print graph[k[0]][k[1]]['arcface'], graph[k[0]][k[1]]['arcface'].visible
-                        print other[f[k][0]][f[k][1]]['arcface'], other[f[k][0]][f[k][1]]['arcface'].visible
-                        print 'visible is off'
+                        #print graph[k[0]][k[1]]['arcface'], graph[k[0]][k[1]]['arcface'].visible
+                        #print other[f[k][0]][f[k][1]]['arcface'], other[f[k][0]][f[k][1]]['arcface'].visible
+                        #print 'visible is off'
 			return False
 		if check_outer and graph[k[0]][k[1]]['arcface'].outer \
         			!= other[f[k][0]][f[k][1]]['arcface'].outer:
-			print('faces are off')
+			#print('faces are off')
 			return False
 
 	return True
@@ -190,8 +189,7 @@ def _fixup_edges(G):
 
 def _next(G, arc):
         graph = G.graph
-        face = graph[G.find_node_xy(arc[0].x,arc[0].y)]\
-                    [G.find_node_xy(arc[1].x,arc[1].y)]['arcface']
+        face = graph[arc[0]][arc[1]]['arcface']
 	index = 0
 	for edge in face.ordered_edges:
 		if edge[0].equal(arc[0]) and edge[1].equal(arc[1]):
@@ -223,6 +221,26 @@ def _traverse_and_build_matching(graph, other, arc, other_arc):
 			stack.append(_opp(a))
 	return f
 
+def _traverse_visible_and_build_matching(graph, other, arc, other_arc):
+	"""
+	Algorithm 29 from the paper
+	"""
+	f = {}
+	f[arc] = other_arc
+        #print 'arc = %s otherarc = %s', arc, other_arc
+	stack = []
+	stack.append(arc)
+	while len(stack) > 0:
+		a = stack.pop()
+		if f.get(_next(graph, a), None) == None:
+			f[_next(graph, a)] = _next(other,f[a])
+			stack.append(_next(graph, a))
+                oa = _opp(a)
+		if graph[oa[0]][oa[1]]['arcface'].visible and f.get(_opp(a), None) == None:
+			f[_opp(a)] = _opp(f[a])
+			stack.append(_opp(a))
+	return f
+
 def check_plane_isomorphism(G, OG):
 	"""
 	Algorithm 28 from the paper
@@ -236,7 +254,7 @@ def check_plane_isomorphism(G, OG):
 
         arc0 = _get_outer_arcs(G)[0]
 	other_arcs = _get_outer_arcs(OG)
-        print other_arcs
+        #print other_arcs
         #p = pprint.PrettyPrinter(indent=4, depth=4)
 	for other_arc in other_arcs:
 		f = _traverse_and_build_matching(G, OG, arc0, other_arc)
@@ -262,3 +280,6 @@ def check_sphere_isomorphism(G, OG):
 			return True
 
         return False
+
+def check_pattern(P, G):
+        pass
