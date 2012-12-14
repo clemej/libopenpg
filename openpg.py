@@ -88,6 +88,7 @@ class face:
 		self.graph = graph
 		self.edgelist = []
 		self.nodelist = set()
+                self.initial_edge = None
 		if len(edgelist) > 2:
 			for n1,n2 in edgelist:
 				self.add_edge(n1, n2)
@@ -122,9 +123,19 @@ class face:
 				ret.append(filter(lambda x: x != node, e)[0])
 		return ret
 
-	def edges_in_order(self, start, node, realstart):
+        def set_initial_edge(self, n1, n2):
+                self.initial_edge = (n1, n2)
+
+	def edges_in_order(self, start=None, node=None, realstart=None):
 		if len(self.ordered_edges) > 0:
 			return self.ordered_edges
+                
+                if not start:
+                        start = self.initial_edge[0]
+                if not node:
+                        node = self.initial_edge[1]
+                if not realstart:
+                        realstart = self.initial_edge[0]
 
 		ret = [(start, node)]
 
@@ -138,7 +149,7 @@ class face:
 			if len(self.graph[node][n]['faces']) == 1:
 				ret.append((node, n))
 				ret.append((n, node))
-				filt.append(n)	
+				filt.append(n)
 
 		neighbors = filter(lambda x: x not in filt, neighbors)
 

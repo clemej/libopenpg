@@ -4,7 +4,7 @@ import pprint
 def _get_outer_arcs(G):
         graph = G.graph
         return [arc for arc in graph.edges() if 
-		graph[arc[0]][arc[1]].get('outer',None) and arc[1].x > arc[0].x]
+		graph[arc[0]][arc[1]].get('outer',None) ]
 
 def _check_lemma4(f, G, OG, check_outer=True):
         graph = G.graph
@@ -13,35 +13,41 @@ def _check_lemma4(f, G, OG, check_outer=True):
 	#p.pprint(f)
 	#if self._next(other, v) != self._next(graph, k) or \
         #print f
+        print '-------------------------------------------------'
 	for k in f.keys():
 		#print k
 		#print f[k]
                 #print self._next(OG, f[k]), self._next(G, k)
 		#if self._next(other, v) != self._next(graph, k) or \
                 ognext = _next(OG, f[k])
-                gnext = _next(G, k)
+                gnext = f[_next(G, k)]
                 ogopp = _opp(f[k])
-                gopp = _opp(k)
+                gopp = f[_opp(k)]
+                print 'next: ', ognext, gnext 
+                print 'opp : ',ogopp, gopp
+
                 #print 'next: ', ognext[0].equiv(gnext[0]) and ognext[1].equiv(gnext[1])
                 #print 'opp: ', ogopp[0].equiv(gopp[0]) and ogopp[1].equiv(gopp[1])
                 #print _next(OG, f[k]), _next(G, k)
 		#if _next(OG, f[k]) != _next(G, k) or _opp(f[k]) != _opp(k):
-                if not (ognext[0].equiv(gnext[0]) and ognext[1].equiv(gnext[1])):
+                if ognext[0] is not gnext[0] or ognext[1] is not gnext[1]:
                         #print self._next(OG, f[k]), self._next(G, k)
-        		#print('next is off')
+        		print('next is off')
 			return False
 
-                if not (ogopp[0].equiv(gopp[0]) and ogopp[1].equiv(gopp[1])):
-                        #print('opp is off')
+                if ogopp[0] is not gopp[0] or ogopp[1] is not gopp[1]:
+                        print('opp is off')
                         return False
 
 		if graph[k[0]][k[1]]['arcface'].visible != \
 				other[f[k][0]][f[k][1]]['arcface'].visible:
-                        #print 'visible is off'
+                        print graph[k[0]][k[1]]['arcface'], graph[k[0]][k[1]]['arcface'].visible
+                        print other[f[k][0]][f[k][1]]['arcface'], other[f[k][0]][f[k][1]]['arcface'].visible
+                        print 'visible is off'
 			return False
 		if check_outer and graph[k[0]][k[1]]['arcface'].outer \
         			!= other[f[k][0]][f[k][1]]['arcface'].outer:
-			#print('faces are off')
+			print('faces are off')
 			return False
 
 	return True
@@ -78,8 +84,11 @@ def _trace_faces(G, initial):
 			face = entry[0]
 			initedge = entry[1][0]
 
-			edges = face.edges_in_order(initedge[0], 
-						initedge[1], initedge[0])
+                        if face.outer == True:
+                                edges = face.edges_in_order()
+                        else:
+			        edges = face.edges_in_order(
+					initedge[0], initedge[1], initedge[0])
 
 			#print edges
                         #print '======================================'
@@ -95,6 +104,8 @@ def _trace_faces(G, initial):
         			if not graph[e[0]][e[1]].get('arcface', None):
 					#print 'working on: ', e
         				graph[e[0]][e[1]]['arcface'] = face
+                                        if not face.outer and 'outer' in graph[e[0]][e[1]].keys():
+                                                del graph[e[0]][e[1]]['outer']
 					
                                         #print list(graph[e[0]][e[1]]['faces'])
 					other_faces = filter(lambda x: x is not face, list(graph[e[0]][e[1]]['faces']))
@@ -105,6 +116,8 @@ def _trace_faces(G, initial):
 					other_face = other_faces[0]
 
 					graph[e[1]][e[0]]['arcface'] = other_face
+                                        if not other_face.outer and 'outer' in graph[e[1]][e[0]].keys() :
+                                                del graph[e[1]][e[0]]['outer']
 
 					for fi in faces_info:
 					        #print fi
@@ -157,7 +170,9 @@ def _fixup_edges(G):
                         # This graph has already been divided up, skip it.
                         return
 		if len(graph[initial_edge[0]][initial_edge[1]]['faces']) > 1:
-		        break
+	                break
+
+        initial_edge = G.outer_face().initial_edge
 
 	_trace_faces(G, initial_edge)
 	
@@ -221,6 +236,7 @@ def check_plane_isomorphism(G, OG):
 
         arc0 = _get_outer_arcs(G)[0]
 	other_arcs = _get_outer_arcs(OG)
+        print other_arcs
         #p = pprint.PrettyPrinter(indent=4, depth=4)
 	for other_arc in other_arcs:
 		f = _traverse_and_build_matching(G, OG, arc0, other_arc)
