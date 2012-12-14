@@ -4,7 +4,7 @@ import pprint
 def _get_outer_arcs(G):
         graph = G.graph
         return [arc for arc in graph.edges() if 
-				graph[arc[0]][arc[1]].get('outer',None)]
+		graph[arc[0]][arc[1]].get('outer',None) and arc[1].x > arc[0].x]
 
 def _check_lemma4(f, G, OG, check_outer=True):
         graph = G.graph
@@ -28,28 +28,23 @@ def _check_lemma4(f, G, OG, check_outer=True):
 		#if _next(OG, f[k]) != _next(G, k) or _opp(f[k]) != _opp(k):
                 if not (ognext[0].equiv(gnext[0]) and ognext[1].equiv(gnext[1])):
                         #print self._next(OG, f[k]), self._next(G, k)
-        		print('next is off')
+        		#print('next is off')
 			return False
 
                 if not (ogopp[0].equiv(gopp[0]) and ogopp[1].equiv(gopp[1])):
-                        print('opp is off')
+                        #print('opp is off')
                         return False
 
 		if graph[k[0]][k[1]]['arcface'].visible != \
 				other[f[k][0]][f[k][1]]['arcface'].visible:
-                        print 'visible is off'
+                        #print 'visible is off'
 			return False
 		if check_outer and graph[k[0]][k[1]]['arcface'].outer \
         			!= other[f[k][0]][f[k][1]]['arcface'].outer:
-			print('faces are off')
+			#print('faces are off')
 			return False
 
 	return True
-
-def __update_faces_initial_edge(entry, face, initial):
-	if entry[0] is face:
-		entry[1][0] = initial
-	return entry
 
 def _trace_faces(G, initial):
 	# build up a datastructure that keeps track of each face we've
@@ -69,17 +64,9 @@ def _trace_faces(G, initial):
 		else:
 			faces_info.append([f, [None, False]])
 
-	#print initial
-	#print faces_info
-
-	#ready_faces = filter(lambda x: x[1][1] == False, faces_info)
-	#print ready_faces
-
 	while True:
-                #print len(ready_faces)
 		# find first entry that is not done and has an initial
 		# edge
-		#print filter(lambda x: x[1][1] == False, faces_info)
 		for entry in faces_info:
 			if entry[1][0] == None:
 			        #print 'entry is none, skipping'
@@ -115,38 +102,17 @@ def _trace_faces(G, initial):
 						print 'edge ',e,'is pendent'
 						continue
 
-                                        #print 'other_face = ', other_faces
 					other_face = other_faces[0]
 
 					graph[e[1]][e[0]]['arcface'] = other_face
 
-					#print 'other_face = ', other_face
-
-        				#print len(faces_info)
-                                        #print faces_info
 					for fi in faces_info:
 					        #print fi
 						if fi[0] is other_face and fi[1][0] == None:
 							#print 'updating face initial edge'
 							fi[1][0] = (e[1], e[0])
-							#print faces_info
-							#sys.exit(0)
 
-					#faces_info = map(lambda x: self.__update_faces_initial_edge(x, other_face, (e[1], e[0])), faces_info)
-					#print faces_info
-					#sys.exit(0)
-						
-					#print [x for x in faces_info if x[0] == other_face]
-
-					#other_entry = filter(lambda x: x[0] == other_face, faces_info)[0]
-					#sys.exit(0)
-					#if other_entry[1][0] == None:
-					#	other_entry[1][0] = (e[1], e[0])
-
-					#if other_face not in map(lambda x: x[0], faces_info):
-					#	faces_info.append([other_face, [ (e[1], e[0]), False ]])
 				else:
-					#print 'skipping? why?', e
                                         pass
 				
 			entry[1][1] = True
@@ -194,15 +160,17 @@ def _fixup_edges(G):
 		        break
 
 	_trace_faces(G, initial_edge)
-		
-	for e in graph.edges_iter():
+	
+        # XXXjc: I dont't think this is needed anymore...
+	#for e in graph.edges_iter():
 		# XXXjc: until I figure out why, some pendent edges don't
 		# get labelled, so fix them here
-		if graph[e[0]][e[1]].get('arcface', None) == None:
-			for f in G.faces:
-				if (e[0], e[1]) in f.edgelist or \
-				    (e[1], e[0]) in f.edgelist:
-					graph[e[0]][e[1]]['arcface'] = f
+	#	if graph[e[0]][e[1]].get('arcface', None) == None:
+	#		for f in G.faces:
+	#			if (e[0], e[1]) in f.edgelist or \
+	#			    (e[1], e[0]) in f.edgelist:
+        #                               print 'labelling missed edge'
+	#				graph[e[0]][e[1]]['arcface'] = f
 
 
 def _next(G, arc):
@@ -253,9 +221,10 @@ def check_plane_isomorphism(G, OG):
 
         arc0 = _get_outer_arcs(G)[0]
 	other_arcs = _get_outer_arcs(OG)
-
+        #p = pprint.PrettyPrinter(indent=4, depth=4)
 	for other_arc in other_arcs:
 		f = _traverse_and_build_matching(G, OG, arc0, other_arc)
+                #p.pprint(f) 
 		if _check_lemma4(f, G, OG):
 			return True
 

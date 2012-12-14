@@ -609,10 +609,11 @@ class openpg():
 	def print_info(self, verbose=False):
 		pp = pprint.PrettyPrinter(indent=2, depth=4)
 		print('Nodes = %d' % (self.graph.number_of_nodes()))
+                pp.pprint(self.graph.nodes()[:5])
 		print('Edges = %d' % (self.graph.number_of_edges()))
 		print('Faces = %d' % (len(self.faces)))
-		if verbose:
-			pp.pprint(self.faces)
+		#if verbose:
+		#	pp.pprint(self.faces)
 		print('Visible = (%d/%d)' % \
 			(len([x for x in self.faces if x.visible]),
 							len(self.faces)))
