@@ -33,43 +33,6 @@ def save(graph, filename):
 	pickle.dump(graph, fd)
 	fd.close()
 
-
-class node:
-	"""
-	Class for implementing a node in the open planar graph.
-
-	Any node class can be used, but is must provide an equal() method
-	that can be used to compare two nodes.  
-
-	This impletation of a node has an x and y attribute that must be 
-	uniqie, because this is intended for image processing.  
-
-	XXXc: Make this more generic.
-	"""
-	def __init__(self, g, x, y):
-		self.x = x
-		self.y = y
-		self.graph = g
-
-	def equal(self, other):
-		if other.graph == self.graph and \
-				other.x == self.x and other.y == self.y:
-			return True
-		else:
-			return False
-
-        def equiv(self, other):
-                if other.x == self.x and other.y == self.y:
-                        return True
-                else:
-                        return False
-
-	def __repr__(self):
-		return '0x%x (%d,%d)' % (id(self), self.x, self.y)
-
-	def __iter__(self):
-		return (self.x, self.y)
-
 class face:
 	"""
 	A face in a graph.  A face is defined by a set of edges and nodes
@@ -83,21 +46,17 @@ class face:
 	space beyond the boundary of the graph.  Indicated with the 'outer'
 	attribute.
 	"""
-	def __init__(self, graph, edgelist=[], adjacent=[], 
+	def __init__(self, nodeids, name=None, G=None, 
 						visible=False, outer=False):
-		self.graph = graph
-		self.edgelist = []
-		self.nodelist = set()
-                self.initial_edge = None
-		if len(edgelist) > 2:
-			for n1,n2 in edgelist:
-				self.add_edge(n1, n2)
+		self.name = name
+		self.G = G
+		self.nodes = nodeids
 		self.visible = visible
 		self.outer = outer
-		self.ordered_edges = []
 
 	#def __repr__(self):
 	#	return 'Face(%s)(%s)' % (self.visible,self.nodelist)
+
 
 	def add_edge(self, n1, n2):
 		""" Add an edge to an existing face """
@@ -288,7 +247,7 @@ class openpg():
 	Functions exist to "normalize" the graph and search for isomorphism. 
 	"""
 	def __init__(self, data=None, name='', **attr):
-		self.graph = nx.Graph(data = data, name = name, **attr)
+		self.graph = nx.DiGraph(data = data, name = name, **attr)
 		self.faces = []
 
         def to_directed(self):
@@ -299,6 +258,21 @@ class openpg():
 
 	def add_face(self, face):
 		""" Adds a face object to the graph """
+		# XXXjc: can we not assign nodes to faces? just edges?
+		#for n in face.nodes:
+		#	if n in self.graph.nodes():
+		#		self.graph[n]['faces'].append(self)
+		#	else:
+		#		print 'adding node %0d' % n
+		#		self.graph.add_node(n, faces=[self])
+
+		face.G = self
+
+		for idx, n in enumerate(face.nodes[:-1]):
+			self.graph.add_edge(
+				face.nodes[idx], face.nodes[idx+1], face = face)
+
+		self.graph.add_edge(face.nodes[-1], face.nodes[0], face = face)
 		self.faces.append(face)
 
 	def remove_face(self, face):
@@ -373,47 +347,60 @@ class openpg():
 		""" Return all bridge edges as list of (n1,n2) pairs """
 		ret = []
 		for edge in self.graph.edges_iter():
-			if len(self.graph[edge[0]][edge[1]]['faces']) == 2:
-				visible = False
-				for f in self.graph[edge[0]][edge[1]]['faces']:
-					#print(edge,f.visible)
-					if f.visible:
-						visible = True
-				if not visible:
-					ret.append(edge)
+			n1 = edge[0]
+			n2 = edge[1]
+			f1 = self.graph[n1][n2]['face']
+			f2 = self.graph[n2][n1]['face']
 
+			if f1 is not f2 and not f1.visible and not f2.visible:
+				# Needed to keep both edges in directed graph
+				# from being appended.
+				if (n2,n1) not in ret:
+					ret.append(edge)
+			
 		return ret
 
 	def branches(self):
 		""" Return all branches as list of (n1,n2) pairs """
 		ret = []
-		for e in [x for x in self.graph.edges_iter() 
-				if len(self.graph[x[0]][x[1]].get('faces',[])) == 1]:
-			face = list(self.graph[e[0]][e[1]]['faces'])[0]
-			if face.visible:
-				continue
-			if nx.degree(self.graph,e[0]) > 1 and \
-					nx.degree(self.graph,e[1]) > 1:
-				ret.append(e)
+		for edge in self.graph.edges_iter():
+			n1 = edge[0]
+			n2 = edge[1]
+			f1 = self.graph[n1][n2]['face']
+			f2 = self.graph[n2][n1]['face']
+
+			if f1 is f2:
+				if f1.visible:
+					continue
+
+				if nx.neighbors(self.graph, n1) > 1 and \
+					nx.neighbors(self.graph, n2) > 1:
+					if (n2,n1) not in ret:
+						ret.append(edge)
 		return ret
 
 	def hinges(self):
 		""" Return a list of all detected hinge nodes """
 		ret = []
-		# Consider a node a /possible/ hing if it meets two criteria:
+		# Consider a node a /possible/ hinge if it meets two criteria:
 		# - it has a degree of at least 3
 		# - it is in two or more visible faces
 		for node in [x for x in self.graph.nodes_iter() 
-						if nx.degree(self.graph, x) > 3]:
-			
-			adjacent_visible_faces = \
-				[ f for f in self.faces 
-						if node in f.nodelist 
-						and f.visible]
-			#print(adjacent_visible_faces)
-			if len(adjacent_visible_faces) < 2:
-				continue
+					if nx.neighbors(self.graph, x) > 3]:
 
+			neighbors = nx.neighbors(self.graph, node)
+			faces = set()
+			for n in neighbors:
+				f1 = self.graph[node][n]['face']
+				f2 = self.graph[n][node]['face']
+				if f1.visible:
+					faces.add(f1)
+				if f2.visible:
+					faces.add(f2)
+
+			if len(faces) < 2:
+				continue
+			
 			result,on = self._examine_hinge(node)
 			if len(result) > 3:
 				#pprint.pprint(on)
@@ -436,7 +423,7 @@ class openpg():
 		curnode = neighbors[0]
 		#pprint.pprint(curnode)
 		# needed bacuse you can't index into sets()
-		curface = list(self.graph[node][curnode]['faces'])[0]
+		curface = self.graph[node][curnode]['face']
 		#print (curface)
 		#for face in self[node][curnode]['faces']:
 		#	curface = face
@@ -449,8 +436,9 @@ class openpg():
 
 			# Add/skip an pendent nodes in this face
 			pendent_neighbors_in_face = [x for x in
-					curface.nodelist if x in neighbors and
-					len(self.graph[node][x]['faces']) == 1 and 
+					curface.nodes if x in neighbors and
+					self.graph[node][x]['face'] == 
+					self.graph[x][node]['face'] and 
 					x not in ordered_neighbors]
 			if len(pendent_neighbors_in_face) > 0:
 				#print('pendent neighbors in face: %s' % 
@@ -458,7 +446,7 @@ class openpg():
 				pass
 			ordered_neighbors += pendent_neighbors_in_face
 
-			newnode = [x for x in curface.nodelist 
+			newnode = [x for x in curface.nodes 
 						if x in neighbors and 
 						x not in ordered_neighbors]
 
@@ -475,8 +463,9 @@ class openpg():
 			#print(self[node][newnode]['faces'] - 
 			#		self[node][curnode]['faces'])
 
-			newface = list(self.graph[node][newnode]['faces'] -
-					self.graph[node][curnode]['faces'])[0]
+			newface = self.graph[newnode][node]['face']
+				#list(self.graph[node][newnode]['faces'] -
+				#self.graph[node][curnode]['faces'])[0]
 
 			if newface.visible == curres[0]:
 				curres[1].append(newface)
