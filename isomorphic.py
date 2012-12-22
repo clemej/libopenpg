@@ -38,14 +38,14 @@ def _check_lemma4(f, G, OG, check_outer=True):
                         #print('opp is off')
                         return False
 
-		if graph[k[0]][k[1]]['arcface'].visible != \
-				other[f[k][0]][f[k][1]]['arcface'].visible:
+		if graph[k[0]][k[1]]['face'].visible != \
+				other[f[k][0]][f[k][1]]['face'].visible:
                         #print graph[k[0]][k[1]]['arcface'], graph[k[0]][k[1]]['arcface'].visible
                         #print other[f[k][0]][f[k][1]]['arcface'], other[f[k][0]][f[k][1]]['arcface'].visible
                         #print 'visible is off'
 			return False
-		if check_outer and graph[k[0]][k[1]]['arcface'].outer \
-        			!= other[f[k][0]][f[k][1]]['arcface'].outer:
+		if check_outer and graph[k[0]][k[1]]['face'].outer \
+        			!= other[f[k][0]][f[k][1]]['face'].outer:
 			#print('faces are off')
 			return False
 
@@ -189,14 +189,14 @@ def _fixup_edges(G):
 
 def _next(G, arc):
         graph = G.graph
-        face = graph[arc[0]][arc[1]]['arcface']
+        face = graph[arc[0]][arc[1]]['face']
 	index = 0
-	for edge in face.ordered_edges:
-		if edge[0].equal(arc[0]) and edge[1].equal(arc[1]):
+	for edge in face.edges():
+		if edge[0] == arc[0] and edge[1] == arc[1]:
 			break
 		index = index + 1
 
-	return face.ordered_edges[(index + 1) % len(face.ordered_edges)]
+	return face.edges()[(index + 1) % len(face.edges())]
 
 
 def _opp(arc):
@@ -246,17 +246,10 @@ def check_plane_isomorphism(G, OG):
 	Algorithm 28 from the paper
 	"""
 
-	G.to_directed()
-        OG.to_directed()
-
-	_fixup_edges(G)
-	_fixup_edges(OG)
-
-        arc0 = _get_outer_arcs(G)[0]
-	other_arcs = _get_outer_arcs(OG)
+        arc0 = G.outer_face().edges()[0]
         #print other_arcs
         #p = pprint.PrettyPrinter(indent=4, depth=4)
-	for other_arc in other_arcs:
+	for other_arc in OG.outer_face().edges():
 		f = _traverse_and_build_matching(G, OG, arc0, other_arc)
                 #p.pprint(f) 
 		if _check_lemma4(f, G, OG):
@@ -265,16 +258,9 @@ def check_plane_isomorphism(G, OG):
 	return False
 
 def check_sphere_isomorphism(G, OG):
-     	G.to_directed()
-        OG.to_directed()
+        arc0 = G.outer_face().edges()[0]
 
-	_fixup_edges(G)
-	_fixup_edges(OG)
-
-        arc0 = _get_outer_arcs(G)[0]
-	other_arcs = _get_outer_arcs(OG)
-
-	for other_arc in other_arcs:
+	for other_arc in OG.outer_face().edges():
 		f = _traverse_and_build_matching(G, OG, arc0, other_arc)
 		if _check_lemma4(f, G, OG, check_outer=False):
 			return True

@@ -19,7 +19,7 @@ def example_graph1(name='square6'):
 	f2 = openpg.face([10,11,21,20], visible=True)
 	f3 = openpg.face([20,21,31,30])
 	f4 = openpg.face([01,02,12,11])
-	f5 = openpg.face([11,12,22,21])
+	f5 = openpg.face([11,12,22,21], visible=True)
 	f6 = openpg.face([21,22,32,31], visible=True)
 
 	G.add_face(fouter)
@@ -57,4 +57,29 @@ def example_graph2():
 
 	return G
 
+def example_graph3(name=''):
+        G = openpg.openpg(name=name)
+
+        fouter = openpg.face([-1,-2,-3,-4], visible=False, outer=True)
+        ftop = openpg.face([-3,-2,-1,00,10,20,30,31,32], visible=True)
+        fbottom = openpg.face([00,-1,-4,-3,32,22,12,02,01], visible=True)
+
+	f1 = openpg.face([00,01,11,90,11,10], visible=True)
+	f2 = openpg.face([10,11,21,20], visible=True)
+	f3 = openpg.face([20,21,31,30])
+	f4 = openpg.face([01,02,12,11])
+	f5 = openpg.face([11,12,22,21])
+	f6 = openpg.face([21,22,32,31], visible=True)
+
+	G.add_face(fouter)
+        G.add_face(ftop)
+        G.add_face(fbottom)
+	G.add_face(f1)
+	G.add_face(f2)
+	G.add_face(f3)
+	G.add_face(f4)
+	G.add_face(f5)
+	G.add_face(f6)
+
+        return G
 

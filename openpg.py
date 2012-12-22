@@ -60,9 +60,16 @@ class face:
 		self.visible = visible
 		self.outer = outer
 
-	#def __repr__(self):
-	#	return 'Face(%s)(%s)' % (self.visible,self.nodelist)
+	def __repr__(self):
+		return 'Face(%s)(%s)' % (self.visible,self.nodes)
 
+
+        def edges(self):
+                ret = []
+                for idx in range(len(self.nodes)-1):
+                        ret.append((self.nodes[idx], self.nodes[idx+1]))
+                ret.append((self.nodes[-1],self.nodes[0]))
+                return ret
 
 	def add_edge(self, n1, n2):
 		""" Add an edge to an existing face """
@@ -613,7 +620,7 @@ class openpg():
 			faces = [self.graph[n1][n2]['face'],
 				     self.graph[n2][n1]['face']]
 
-			print n1,n2,faces
+			#print n1,n2,faces
 
 			if faces[1].outer:
 				kept_face = faces[1]
@@ -624,16 +631,29 @@ class openpg():
 				other_face = faces[1]
 
 			# Find n1,n2 in the face we're keeping
-			for kf_idx in range(len(kept_face.nodes)):
-				if kept_face.nodes[kf_idx:kf_idx+2] == [n1, n2]:
-					break
+                        lkf = len(kept_face.nodes)
+                        if n1 == kept_face.nodes[-1] and \
+                                                n2 == kept_face.nodes[0]:
+                                kf_idx = lkf - 1
+                        else:
+        			for kf_idx in range(lkf):
+	        			if kept_face.nodes[kf_idx:kf_idx+2] \
+                                                                == [n1, n2]:
+					        break
 
-			for of_idx in range(len(other_face.nodes)):
-				if other_face.nodes[of_idx:of_idx+2] ==[n2, n1]:
-					break
+
+                        lof = len(other_face.nodes)
+                        if n2 == other_face.nodes[-1] and \
+                                                n1 == other_face.nodes[0]:
+                                of_idx = lof - 1
+                        else:
+        			for of_idx in range(lof):
+		        		if other_face.nodes[of_idx:of_idx+2] \
+                                                                == [n2, n1]:
+				        	break
 			of_idx = of_idx + 1
-			print kept_face.nodes, kf_idx
-			print other_face.nodes, of_idx
+			#print kept_face.nodes, kf_idx
+			#print other_face.nodes, of_idx
 
 			# Generate the new face node's list 
 			kept_face.nodes = kept_face.nodes[:kf_idx+1] + \
@@ -646,7 +666,7 @@ class openpg():
 
 			# Relabel all edges with the new face
 			for idx, n in enumerate(kept_face.nodes[:-1]):
-				print idx, kept_face.nodes[idx], kept_face.nodes[idx+1]
+				#print idx, kept_face.nodes[idx], kept_face.nodes[idx+1]
 				self.graph[kept_face.nodes[idx]]\
 					  [kept_face.nodes[idx+1]]\
 					  ['face'] = kept_face
