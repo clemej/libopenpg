@@ -373,8 +373,8 @@ class openpg():
 				if f1.visible:
 					continue
 
-				if nx.neighbors(self.graph, n1) > 1 and \
-					nx.neighbors(self.graph, n2) > 1:
+				if len(nx.neighbors(self.graph, n1)) > 1 and \
+					len(nx.neighbors(self.graph, n2)) > 1:
 					if (n2,n1) not in ret:
 						ret.append(edge)
 		return ret
@@ -562,7 +562,8 @@ class openpg():
 		bridges = self.bridges()
 		while(len(bridges) > 0):
 			n1,n2 = bridges[0]
-			faces = list(self.graph[n1][n2]['faces'])
+			faces = [self.graph[n1][n2]['face'],
+				     self.graph[n2][n1]['face']]
 
 			if faces[1].outer:
 				kept_face = faces[1]

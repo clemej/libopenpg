@@ -38,7 +38,7 @@ def example_graph2():
         """
         G = example_graph1(name='square6-extras')
 
-	fouter = openpg.face([00,10,20,30,31,32,22,12,02,01,70,01,60,01], 
+	fouter = openpg.face([00,10,20,30,31,32,22,12,02,01,70,71,70,01,60,01], 
 					visible=False, outer=True)
 	f1 = openpg.face([00,01,11,90,11,10], visible=True)
 	f2 = openpg.face([10,11,21,20], visible=True)
