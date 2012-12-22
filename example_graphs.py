@@ -36,7 +36,7 @@ def example_graph2():
         """
         Same as graph1, but with some pendent nodes added. 
         """
-        G = example_graph1(name='square6-extras')
+        G = openpg.openpg(name='square6-extras')
 
 	fouter = openpg.face([00,10,20,30,31,32,22,12,02,01,70,71,70,01,60,01], 
 					visible=False, outer=True)
@@ -56,23 +56,5 @@ def example_graph2():
 	G.add_face(f6)
 
 	return G
-
-
-        # Adding a pendent node
-        #newnode = openpg.node(G, 99,99)
-        #G.add_node(newnode)
-        #G.add_edge(G.find_node_xy(1,1), newnode)
-        #G.faces[1].add_edge(G.find_node_xy(1,1), newnode)
-        #G[G.find_node_xy(1,1)][newnode]['faces'].add(G.faces[1])
-
-        pend2 = openpg.node(G, 90,90)
-        pend3 = openpg.node(G, 80,80)
-        G.add_edge(pend2, G.find_node_xy(0,1))
-        G.faces[0].add_edge(pend2, G.find_node_xy(0,1))
-        G.add_edge(pend3, G.find_node_xy(0,1))
-        G.faces[0].add_edge(pend3, G.find_node_xy(0,1))
-
-        #print(G.faces[0])
-        return G
 
 

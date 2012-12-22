@@ -1,4 +1,5 @@
 import sys
+from collections import deque
 import pprint
 
 try:
@@ -32,6 +33,11 @@ def save(graph, filename):
 	fd = open(filename, 'wb')
 	pickle.dump(graph, fd)
 	fd.close()
+
+def rotleft(l, n):
+	d = deque(l)
+	d.rotate(-n)
+	return list(d)
 
 class face:
 	"""
@@ -556,7 +562,7 @@ class openpg():
 
 		self.add_face(new_face)
 		self.remove_node(hinge)
-	
+
 	def _eliminate_bridges(self):
 		""" Remove all bridges """
 		bridges = self.bridges()
@@ -568,13 +574,35 @@ class openpg():
 			if faces[1].outer:
 				kept_face = faces[1]
 				other_face = faces[0]
+				n2,n1 = bridges[0]
 			else:
 				kept_face = faces[0]
 				other_face = faces[1]
 
-			kept_face.merge(other_face, (n1,n2))
-			self.remove_face(other_face)
-			self.graph.remove_edge(n1,n2)
+			# Find n1,n2 in the face we're keeping
+			kf_idx = kept_face.nodes.index(n1)
+			of_idx = other_face.nodes.index(n1)
+
+			# Generate the new face node's list 
+			kept_face.nodes = kept_face.nodes[:kf_idx+1] + \
+				rotleft(other_face.nodes, of_idx)[1:-1] + \
+				kept_face.nodes[kf_idx+1:]
+
+			# Remove both edges
+			self.graph.remove_edge(n1, n2)
+			self.graph.remove_edge(n2, n1)
+
+			# Relabel all edges with the new face
+			for idx, n in enumerate(kept_face.nodes[:-1]):
+				self.graph[kept_face.nodes[idx]]\
+					  [kept_face.nodes[idx+1]]\
+					  ['face'] = kept_face
+
+			self.graph[kept_face.nodes[-1]][kept_face.nodes[0]]\
+							['face'] = kept_face
+
+			# Remove the old face from the list of faces
+			self.faces.remove(other_face)
 
 			bridges = self.bridges()
 			#print(len(bridges))
@@ -583,29 +611,28 @@ class openpg():
 		""" Remove all pendent nodes in non-visible faces """
 		#find each pendent in an invisible face
 		pendents = [x for x in self.pendents() if not
-			list(self.graph[x][nx.neighbors(self.graph, x)[0]]
-						['faces'])[0].visible]
+				self.graph[x][nx.neighbors(self.graph, x)[0]]\
+							['face'].visible]
 		#print(len(pendents))
 
 		while len(pendents) > 0:
 			p = pendents[0]
-
-			edge = (p, nx.neighbors(self.graph, p)[0])
-			face = list(self.graph[edge[0]][edge[1]]['faces'])[0]
-
-			#print(edge)
-			#print(face)
-
-			face.remove_edge(edge[0], edge[1])
-                        face.remove_node(p)
-			self.graph.remove_edge(edge[0], edge[1])
+			other = nx.neighbors(self.graph, p)[0]
+			face = self.graph[p][other]['face']
+			
+			self.graph.remove_edge(p,other)
+			self.graph.remove_edge(other,p)
 			self.graph.remove_node(p)
 
-			pendents = [x for x in self.pendents() if not
-				list(self.graph[x][nx.neighbors(self.graph, x)[0]]['faces'])[0].visible]
-			#print(pendents)
-			#print(len(pendents))
+			for idx in range(len(face.nodes)):
+				if face.nodes[idx:idx+2] == [p, other]:
+					break
 
+			face.nodes = face.nodes[0:idx] + face.nodes[idx+2:]
+
+			pendents = [x for x in self.pendents() if not
+				self.graph[x][nx.neighbors(self.graph, x)[0]]\
+							['face'].visible]
 
 	def print_info(self, verbose=False):
 		pp = pprint.PrettyPrinter(indent=2, depth=4)
@@ -641,6 +668,7 @@ class openpg():
 		- Remove all pendents edges in non-visible faces
 		"""
 		self._eliminate_hinges()
+		#self.print_info(verbose=True)
 		self._eliminate_bridges()
 		self._eliminate_pendents()
 
