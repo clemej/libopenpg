@@ -396,6 +396,7 @@ class openpg():
 
 			neighbors = nx.neighbors(self.graph, node)
 			faces = set()
+			#print node
 			for n in neighbors:
 				f1 = self.graph[node][n]['face']
 				f2 = self.graph[n][node]['face']
@@ -407,6 +408,7 @@ class openpg():
 			if len(faces) < 2:
 				continue
 			
+			#print 'sending to examine_hings'
 			result,on = self._examine_hinge(node)
 			if len(result) > 3:
 				#pprint.pprint(on)
@@ -424,12 +426,15 @@ class openpg():
 
 		ordered_neighbors = []
 		neighbors = nx.neighbors(self.graph, node)
+		#print 'neighbors: ', neighbors
 
 		# Take first neighbor node returned to start
 		curnode = neighbors[0]
-		#pprint.pprint(curnode)
-		# needed bacuse you can't index into sets()
-		curface = self.graph[node][curnode]['face']
+	
+		# grab the incoming edge in from that neighbor. 	
+		curface = self.graph[curnode][node]['face']
+
+
 		#print (curface)
 		#for face in self[node][curnode]['faces']:
 		#	curface = face
@@ -446,15 +451,16 @@ class openpg():
 					self.graph[node][x]['face'] == 
 					self.graph[x][node]['face'] and 
 					x not in ordered_neighbors]
-			if len(pendent_neighbors_in_face) > 0:
-				#print('pendent neighbors in face: %s' % 
-				#		pendent_neighbors_in_face)
-				pass
+			#if len(pendent_neighbors_in_face) > 0:
+			#	print('pendent neighbors in face: %s' % 
+			#			pendent_neighbors_in_face)
+			#	pass
 			ordered_neighbors += pendent_neighbors_in_face
 
 			newnode = [x for x in curface.nodes 
 						if x in neighbors and 
 						x not in ordered_neighbors]
+			#print 'newnode: ', newnode
 
 			if len(newnode) == 0:
 				# exit condition XXXjc: clean up
@@ -516,25 +522,33 @@ class openpg():
 
 		#print(hinge)
 		#print(hinfo)
-
-		new_face = face(self.graph, edgelist=[], visible=False)
+		print 'removing hinge ', hinge
+		new_face = face([],visible=False)
 
 		for area in hinfo:
 			visible = area[0]
 			# Create a new node
-			newnode = node(self.graph, 
-				marker*(hinfo.index(area)+1)+hinge.x, 
-				marker*(hinfo.index(area)+1)+hinge.y)
+			newnode = marker + hinfo.index(area)+1
+			self.graph.add_node(newnode)
 
 			# for each face in this segment, replace node with
 			# newnode
 			for f in area[1]:
-				neighbors = [x for x in f.nodelist 
+				neighbors = [x for x in f.nodes 
 					if x in nx.neighbors(self.graph, hinge)]
 				for n in neighbors:
 					#print('creating edge %s, %s' % \
 					#	(newnode, n))
-					self.add_edge(newnode, n)
+					if self.graph[n][hinge]['face'] is f:
+						self.add_edge(n,newnode,face=f)
+						self.add_edge(newnode,n,
+								face=new_face)
+						
+					else:
+						self.add_edge(newnode,n,face=f)
+						self.add_edge(n,newnode,
+								face=new_face)
+
 					# copy existing attributes dict
 					# XXXjc: This should be necessary to
 					#        preserve other attributes;
@@ -547,21 +561,49 @@ class openpg():
 					#		self[hinge][n][k]
 
 					#print(self[newnode][n]['faces'])
-					f.add_edge(newnode, n)
-					new_face.add_edge(newnode, n)
+					#f.add_edge(newnode, n)
+					#new_face.add_edge(newnode, n)
 					#print(self[newnode][n]['faces'])
 					#pp = pprint.PrettyPrinter(indent=4, 
 					#			depth=4)
 					#if newnode.x == 4000002:
 					#pp.pprint(self[newnode][n])
 
-				f.remove_node(hinge)
+				f.nodes = [newnode if x == hinge else x \
+							for x in f.nodes]
 
 				#print(f)
 				#print(f.edgelist)
+		
+		# Construct the new face nodes list from the last newnode added
+		start = newnode
+		new_face.nodes = [start]
+		#print  self.graph.out_edges(start)
+		nextnode = filter(lambda x: 
+			self.graph[x[0]][x[1]]['face'] is new_face,
+					self.graph.out_edges(start))[0][1]
+		#print 'nextnode: ', nextnode
+		while nextnode is not start:
+			new_face.nodes.append(nextnode)
+		#	print new_face.nodes
+		#	print new_face
+		#	print self.graph.out_edges(nextnode)
+		#	print map(lambda x: self.graph[x[0]][x[1]]['face'], 
+		#				self.graph.out_edges(nextnode))
+		#	print self.graph.in_edges(nextnode)
+		#	print map(lambda x: self.graph[x[0]][x[1]]['face'], 
+		#				self.graph.in_edges(nextnode))
 
-		self.add_face(new_face)
-		self.remove_node(hinge)
+		#		self.graph[x[0]][x[1]]['face'] is new_face, 
+		#			self.graph.out_edges(nextnode))
+			nextnode = filter(lambda x: 
+				self.graph[x[0]][x[1]]['face'] is new_face, 
+					self.graph.out_edges(nextnode))[0][1]
+
+		self.faces.append(new_face)
+		self.graph.remove_node(hinge)
+
+		print new_face.nodes
 
 	def _eliminate_bridges(self):
 		""" Remove all bridges """
@@ -570,6 +612,8 @@ class openpg():
 			n1,n2 = bridges[0]
 			faces = [self.graph[n1][n2]['face'],
 				     self.graph[n2][n1]['face']]
+
+			print n1,n2,faces
 
 			if faces[1].outer:
 				kept_face = faces[1]
@@ -580,8 +624,16 @@ class openpg():
 				other_face = faces[1]
 
 			# Find n1,n2 in the face we're keeping
-			kf_idx = kept_face.nodes.index(n1)
-			of_idx = other_face.nodes.index(n1)
+			for kf_idx in range(len(kept_face.nodes)):
+				if kept_face.nodes[kf_idx:kf_idx+2] == [n1, n2]:
+					break
+
+			for of_idx in range(len(other_face.nodes)):
+				if other_face.nodes[of_idx:of_idx+2] ==[n2, n1]:
+					break
+			of_idx = of_idx + 1
+			print kept_face.nodes, kf_idx
+			print other_face.nodes, of_idx
 
 			# Generate the new face node's list 
 			kept_face.nodes = kept_face.nodes[:kf_idx+1] + \
@@ -594,6 +646,7 @@ class openpg():
 
 			# Relabel all edges with the new face
 			for idx, n in enumerate(kept_face.nodes[:-1]):
+				print idx, kept_face.nodes[idx], kept_face.nodes[idx+1]
 				self.graph[kept_face.nodes[idx]]\
 					  [kept_face.nodes[idx+1]]\
 					  ['face'] = kept_face

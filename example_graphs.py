@@ -19,7 +19,7 @@ def example_graph1(name='square6'):
 	f2 = openpg.face([10,11,21,20], visible=True)
 	f3 = openpg.face([20,21,31,30])
 	f4 = openpg.face([01,02,12,11])
-	f5 = openpg.face([11,12,22,21], visible=True)
+	f5 = openpg.face([11,12,22,21])
 	f6 = openpg.face([21,22,32,31], visible=True)
 
 	G.add_face(fouter)
