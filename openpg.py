@@ -71,175 +71,6 @@ class face:
                 ret.append((self.nodes[-1],self.nodes[0]))
                 return ret
 
-	def add_edge(self, n1, n2):
-		""" Add an edge to an existing face """
-		self.edgelist.append((n1,n2))
-		self.nodelist.add(n1)
-		self.nodelist.add(n2)
-		if len(self.graph[n1][n2]['faces']) == 2:
-			print ('-------------')
-			print (self.graph[n1][n2]['faces'])
-			print (self)
-			raise(Exception('Adding third face? %s, %s' % (n1, n2)))
-		self.graph[n1][n2]['faces'].add(self)
-		#if len(self.graph[n1][n2]['faces']) > 2:
-		#	print ('-------------')
-		#	print (self.graph[n1][n2]['faces'])
-		#	print (self)
-		#	raise(Exception('Adding third face? %s, %s' % (n1, n2)))
-
-	def node_neighbors(self, node):
-		ret = []
-		for e in self.edgelist:
-			if node in e:
-				ret.append(filter(lambda x: x != node, e)[0])
-		return ret
-
-        def set_initial_edge(self, n1, n2):
-                self.initial_edge = (n1, n2)
-
-	def edges_in_order(self, start=None, node=None, realstart=None):
-		if len(self.ordered_edges) > 0:
-			return self.ordered_edges
-                
-                if not start:
-                        start = self.initial_edge[0]
-                if not node:
-                        node = self.initial_edge[1]
-                if not realstart:
-                        realstart = self.initial_edge[0]
-
-		ret = [(start, node)]
-
-		if node == realstart:
-			return ret
-
-		# add any pendent nodes from 'node'
-		neighbors = self.node_neighbors(node)
-		filt = [start]
-		for n in neighbors:
-			if len(self.graph[node][n]['faces']) == 1:
-				ret.append((node, n))
-				ret.append((n, node))
-				filt.append(n)
-
-		neighbors = filter(lambda x: x not in filt, neighbors)
-
-		if realstart in neighbors:
-			neighbors = filter(lambda x: x != realstart, neighbors)
-			neighbors.append(realstart)
-
-		for n in neighbors:
-			r = self.edges_in_order(node, n, realstart)
-			ret += r
-
-		self.ordered_edges = ret
-		return ret
-
-
-	def remove_node(self, node):
-		""" Remove a node and all connected face edges """
-		self.nodelist.remove(node)
-		newlist = []
-		for e in self.edgelist:
-			if e[0] == node or e[1] == node:
-				continue
-			newlist.append(e)
-		self.edgelist = newlist
-
-	def remove_edge(self, n1, n2):
-		""" Remove an edge, this leaves the nodes """
-		newedgelist = []
-		for e in self.edgelist:
-			if e[0] in [n1,n2] and e[1] in [n1,n2]:
-				#print('ignoring edge %s' % str(e))
-				continue
-			newedgelist.append(e)
-		#print(self.edgelist)
-		#print(newedgelist)
-		self.edgelist = newedgelist
-
-	def merge(self, other, bridge):
-		""" 
-		Merge an adjacent face with this face.  bridge is a 
-		(node1,node2) edge definition of the shared edge. 
-
-		- The bridge edge is removed from both faces. 
-		- All nodes in the 'other' face are added to this face.
-		- All edges in the 'other' face are added to this face.
-		- All edge attrbiutes in new face that point to 'other' are 
-		  updated to point to this face.
-		"""
-		n1,n2 = bridge
-
-		self.remove_edge(n1,n2)
-
-		for e in other.edgelist:
-			#print (e)
-			other.remove_edge(n1,n2)
-			if e[0] in [n1,n2] and e[1] in [n1,n2]:
-				#print('Ingoring other bridge edge %s' % str(e))
-				continue
-
-			newfaceset = set()
-			for f in list(self.graph[e[0]][e[1]]['faces']):
-				if f is other:
-					#print('removing face %s' % f)
-					continue
-				newfaceset.add(f)
-			self.graph[e[0]][e[1]]['faces'] = newfaceset
-			#print(self.graph[e[0]][e[1]]['faces'])
-			self.add_edge(e[0], e[1])
-			#print(self.graph[e[0]][e[1]]['faces'])
-
-
-
-	def equal(self, face):
-		"""
-		Compare two faces to see if they are equivalent
-
-		XXXjc: needed anymore? probablt broken
-		"""
-		if self.graph != face.graph:
-			return False
-
-		for n in self.nodelist:
-			found = False
-			for n2 in face.nodelist:
-				if n.equal(n2):
-					found = True
-					break
-			if not found:
-				return False
-		return True
-
-	# find a common node
-	# find the node in the graph
-	# see if there's an edge to another common node
-	# repeade for all common nodes
-	def adjacent(self):
-		"""
-		Find all adjacent faces to a particular face. 
-
-		XXXjc: Maybe use edge attributes? probably broken now.
-		"""
-		ret = set()
-		for n1,n2 in self.edgelist:
-			for f in self.graph[n1][n2]['faces']:
-				if f is not self:
-					ret.add(f)
-
-		return ret
-
-	def is_adjacent(self, face):
-		""" determine if another face is adjacent to this face. """
-		if self.graph != face.graph:
-			return False
-
-		return face in self.adjacent()
-
-
-
 class openpg():
 	""" 
 	A graph structure that implements an Open Planar Graph as
@@ -262,12 +93,6 @@ class openpg():
 	def __init__(self, data=None, name='', **attr):
 		self.graph = nx.DiGraph(data = data, name = name, **attr)
 		self.faces = []
-
-        def to_directed(self):
-                self.graph = nx.DiGraph(self.graph) #self.graph.to_directed()
-
-        def to_undirected(self):
-                self.graph = self.graph.to_undirected()
 
 	def add_face(self, face):
 		""" Adds a face object to the graph """
@@ -296,56 +121,6 @@ class openpg():
 				continue
 			newfacelist.append(f)
 		self.faces = newfacelist
-
-	def find_node(self, n):
-		""" Find and return a particular node """
-		for needle in self.graph.nodes_iter():
-			if needle.equal(n):
-				return needle
-		return None
-
-	def find_node_xy(self, x, y):
-		""" 
-		Convenience function to find nodes by x,y attribute 
-
-		This is specific to the above node implementation.
-		"""
-		for needle in self.graph.nodes_iter():
-			if needle.x == x and needle.y == y:
-				return needle
-
-	def find_edge(self, node1, node2):
-		""" Find if an edge exists within the graph """
-		n1 = self.find_node(node1)
-		n2 = self.find_node(node2)
-
-		if n2 in self.graph.neighbors(n1):
-			return True
-		return False
-
-	def add_node_if_not_dup(self, node):
-		""" Add node only if its not a duplicate """
-		if not self.find_node(node):
-			self.graph.add_node(node)
-
-	def add_edge_if_not_dup(self, n1, n2):
-		""" Add edge only it doesn't already exist """
-		if not self.find_edge(n1, n2):
-			self.add_edge(n1, n2)
-
-	def add_edge(self, n1, n2, **kwargs):
-		""" Add an edge to the graph, initialize faces attribute """
-		self.graph.add_edge(n1, n2, **kwargs)
-		self.graph[n1][n2]['faces'] = set()
-
-        def edges_iter(self):
-                return self.graph.edges_iter()
-
-        def nodes_iter(self):
-                return self.graph.nodes_iter()
-
-        def add_node(self, node):
-                self.graph.add_node(node)
 
 	def outer_face(self):
 		""" Return the outer face """
@@ -440,13 +215,6 @@ class openpg():
 	
 		# grab the incoming edge in from that neighbor. 	
 		curface = self.graph[curnode][node]['face']
-
-
-		#print (curface)
-		#for face in self[node][curnode]['faces']:
-		#	curface = face
-		#	break
-			
 		curres = [curface.visible, [curface]]
 
 		while len(ordered_neighbors) < len(neighbors):
@@ -458,16 +226,11 @@ class openpg():
 					self.graph[node][x]['face'] == 
 					self.graph[x][node]['face'] and 
 					x not in ordered_neighbors]
-			#if len(pendent_neighbors_in_face) > 0:
-			#	print('pendent neighbors in face: %s' % 
-			#			pendent_neighbors_in_face)
-			#	pass
 			ordered_neighbors += pendent_neighbors_in_face
 
 			newnode = [x for x in curface.nodes 
 						if x in neighbors and 
 						x not in ordered_neighbors]
-			#print 'newnode: ', newnode
 
 			if len(newnode) == 0:
 				# exit condition XXXjc: clean up
@@ -475,16 +238,7 @@ class openpg():
 			else:
 				newnode = newnode[0]
 
-			#print(self[node][newnode]['faces'])
-			#print(self[node][curnode]['faces'])
-
-			#print(node,newnode,curnode)
-			#print(self[node][newnode]['faces'] - 
-			#		self[node][curnode]['faces'])
-
 			newface = self.graph[newnode][node]['face']
-				#list(self.graph[node][newnode]['faces'] -
-				#self.graph[node][curnode]['faces'])[0]
 
 			if newface.visible == curres[0]:
 				curres[1].append(newface)
@@ -495,16 +249,7 @@ class openpg():
 			curnode = newnode
 			curface = newface
 
-		#if len(result) > 0:
-		#	if result[0][0] == curres[0]:
-		#		result[0][1].append(curres[1])
-		#	else:
-		#		result.append(curres)
-		#else:
 		result.append(curres)
-	
-		#pprint.pprint (ordered_neighbors)
-		#print (result)
 		return result, ordered_neighbors
 
 	def _eliminate_hinges(self):
@@ -527,9 +272,6 @@ class openpg():
 		if len(hinfo) < 4:
 			return
 
-		#print(hinge)
-		#print(hinfo)
-		print 'removing hinge ', hinge
 		new_face = face([],visible=False)
 
 		for area in hinfo:
@@ -544,73 +286,34 @@ class openpg():
 				neighbors = [x for x in f.nodes 
 					if x in nx.neighbors(self.graph, hinge)]
 				for n in neighbors:
-					#print('creating edge %s, %s' % \
-					#	(newnode, n))
 					if self.graph[n][hinge]['face'] is f:
-						self.add_edge(n,newnode,face=f)
-						self.add_edge(newnode,n,
+						self.graph.add_edge(n,newnode,face=f)
+						self.graph.add_edge(newnode,n,
 								face=new_face)
 						
 					else:
-						self.add_edge(newnode,n,face=f)
-						self.add_edge(n,newnode,
+						self.graph.add_edge(newnode,n,face=f)
+						self.graph.add_edge(n,newnode,
 								face=new_face)
-
-					# copy existing attributes dict
-					# XXXjc: This should be necessary to
-					#        preserve other attributes;
-					#        but it causes weird errors.
-					#for k in self[hinge][n].keys():
-					#	#print(k)
-					#	if k != 'faces':
-					#		continue
-					#	self[newnode][n][k] = \
-					#		self[hinge][n][k]
-
-					#print(self[newnode][n]['faces'])
-					#f.add_edge(newnode, n)
-					#new_face.add_edge(newnode, n)
-					#print(self[newnode][n]['faces'])
-					#pp = pprint.PrettyPrinter(indent=4, 
-					#			depth=4)
-					#if newnode.x == 4000002:
-					#pp.pprint(self[newnode][n])
 
 				f.nodes = [newnode if x == hinge else x \
 							for x in f.nodes]
 
-				#print(f)
-				#print(f.edgelist)
 		
 		# Construct the new face nodes list from the last newnode added
 		start = newnode
 		new_face.nodes = [start]
-		#print  self.graph.out_edges(start)
 		nextnode = filter(lambda x: 
 			self.graph[x[0]][x[1]]['face'] is new_face,
 					self.graph.out_edges(start))[0][1]
-		#print 'nextnode: ', nextnode
 		while nextnode is not start:
 			new_face.nodes.append(nextnode)
-		#	print new_face.nodes
-		#	print new_face
-		#	print self.graph.out_edges(nextnode)
-		#	print map(lambda x: self.graph[x[0]][x[1]]['face'], 
-		#				self.graph.out_edges(nextnode))
-		#	print self.graph.in_edges(nextnode)
-		#	print map(lambda x: self.graph[x[0]][x[1]]['face'], 
-		#				self.graph.in_edges(nextnode))
-
-		#		self.graph[x[0]][x[1]]['face'] is new_face, 
-		#			self.graph.out_edges(nextnode))
 			nextnode = filter(lambda x: 
 				self.graph[x[0]][x[1]]['face'] is new_face, 
 					self.graph.out_edges(nextnode))[0][1]
 
 		self.faces.append(new_face)
 		self.graph.remove_node(hinge)
-
-		print new_face.nodes
 
 	def _eliminate_bridges(self):
 		""" Remove all bridges """
@@ -619,8 +322,6 @@ class openpg():
 			n1,n2 = bridges[0]
 			faces = [self.graph[n1][n2]['face'],
 				     self.graph[n2][n1]['face']]
-
-			#print n1,n2,faces
 
 			if faces[1].outer:
 				kept_face = faces[1]
@@ -652,8 +353,6 @@ class openpg():
                                                                 == [n2, n1]:
 				        	break
 			of_idx = of_idx + 1
-			#print kept_face.nodes, kf_idx
-			#print other_face.nodes, of_idx
 
 			# Generate the new face node's list 
 			kept_face.nodes = kept_face.nodes[:kf_idx+1] + \
@@ -666,7 +365,6 @@ class openpg():
 
 			# Relabel all edges with the new face
 			for idx, n in enumerate(kept_face.nodes[:-1]):
-				#print idx, kept_face.nodes[idx], kept_face.nodes[idx+1]
 				self.graph[kept_face.nodes[idx]]\
 					  [kept_face.nodes[idx+1]]\
 					  ['face'] = kept_face
@@ -678,7 +376,6 @@ class openpg():
 			self.faces.remove(other_face)
 
 			bridges = self.bridges()
-			#print(len(bridges))
 
 	def _eliminate_pendents(self):
 		""" Remove all pendent nodes in non-visible faces """
@@ -686,7 +383,6 @@ class openpg():
 		pendents = [x for x in self.pendents() if not
 				self.graph[x][nx.neighbors(self.graph, x)[0]]\
 							['face'].visible]
-		#print(len(pendents))
 
 		while len(pendents) > 0:
 			p = pendents[0]
@@ -741,7 +437,6 @@ class openpg():
 		- Remove all pendents edges in non-visible faces
 		"""
 		self._eliminate_hinges()
-		#self.print_info(verbose=True)
 		self._eliminate_bridges()
 		self._eliminate_pendents()
 
