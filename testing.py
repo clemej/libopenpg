@@ -29,9 +29,9 @@ G3.normalize()
 G3.print_info(verbose=True)
 
 print('------ Checking isomorphism  -----')
-print 'For self:'
-print '- Plane Isomorphic: ', isomorphic.check_plane_isomorphism(G1, G1)
-print '- Sphere Isomoprhic:', isomorphic.check_sphere_isomorphism(G2, G2)
-print 'other others:'
-print '- Plane Isomorphic: ', isomorphic.check_plane_isomorphism(G1, G2)
-print '- Sphere Isomorphic:', isomorphic.check_sphere_isomorphism(G2, G1)
+print('For self:')
+print('- Plane Isomorphic: ', isomorphic.check_plane_isomorphism(G1, G1))
+print('- Sphere Isomoprhic:', isomorphic.check_sphere_isomorphism(G2, G2))
+print('other others:')
+print('- Plane Isomorphic: ', isomorphic.check_plane_isomorphism(G1, G2))
+print('- Sphere Isomorphic:', isomorphic.check_sphere_isomorphism(G2, G1))

@@ -63,13 +63,12 @@ class face:
 	def __repr__(self):
 		return 'Face(%s)(%s)' % (self.visible,self.nodes)
 
-
-        def edges(self):
-                ret = []
-                for idx in range(len(self.nodes)-1):
-                        ret.append((self.nodes[idx], self.nodes[idx+1]))
-                ret.append((self.nodes[-1],self.nodes[0]))
-                return ret
+	def edges(self):
+		ret = []
+		for idx in range(len(self.nodes)-1):
+			ret.append((self.nodes[idx], self.nodes[idx+1]))
+		ret.append((self.nodes[-1],self.nodes[0]))
+		return ret
 
 class openpg():
 	""" 
@@ -96,14 +95,6 @@ class openpg():
 
 	def add_face(self, face):
 		""" Adds a face object to the graph """
-		# XXXjc: can we not assign nodes to faces? just edges?
-		#for n in face.nodes:
-		#	if n in self.graph.nodes():
-		#		self.graph[n]['faces'].append(self)
-		#	else:
-		#		print 'adding node %0d' % n
-		#		self.graph.add_node(n, faces=[self])
-
 		face.G = self
 
 		for idx, n in enumerate(face.nodes[:-1]):
@@ -124,7 +115,7 @@ class openpg():
 
 	def outer_face(self):
 		""" Return the outer face """
-		return filter(lambda x: x.outer, self.faces)[0]
+		return [x for x in self.faces if x.outer][0]
 
 	def pendents(self):
 		""" Return all pendent nodes (regardless of visibility) """
@@ -174,7 +165,7 @@ class openpg():
 		# - it has a degree of at least 3
 		# - it is in two or more visible faces
 		for node in [x for x in self.graph.nodes_iter() 
-					if nx.neighbors(self.graph, x) > 3]:
+				if len(nx.neighbors(self.graph, x)) > 3]:
 
 			neighbors = nx.neighbors(self.graph, node)
 			faces = set()
@@ -303,14 +294,15 @@ class openpg():
 		# Construct the new face nodes list from the last newnode added
 		start = newnode
 		new_face.nodes = [start]
-		nextnode = filter(lambda x: 
-			self.graph[x[0]][x[1]]['face'] is new_face,
-					self.graph.out_edges(start))[0][1]
+		# For each out_edge (n1,n2), look for the one with face of 
+		# 'new_face' and return n2. 
+		nextnode = [x for x in self.graph.out_edges(start) if
+			self.graph[x[0]][x[1]]['face'] is new_face][0][1]
 		while nextnode is not start:
 			new_face.nodes.append(nextnode)
-			nextnode = filter(lambda x: 
-				self.graph[x[0]][x[1]]['face'] is new_face, 
-					self.graph.out_edges(nextnode))[0][1]
+			nextnode = [x for x in self.graph.out_edges(nextnode)
+				if self.graph[x[0]][x[1]]['face'] is 
+								new_face][0][1]
 
 		self.faces.append(new_face)
 		self.graph.remove_node(hinge)
@@ -332,26 +324,25 @@ class openpg():
 				other_face = faces[1]
 
 			# Find n1,n2 in the face we're keeping
-                        lkf = len(kept_face.nodes)
-                        if n1 == kept_face.nodes[-1] and \
-                                                n2 == kept_face.nodes[0]:
-                                kf_idx = lkf - 1
-                        else:
-        			for kf_idx in range(lkf):
-	        			if kept_face.nodes[kf_idx:kf_idx+2] \
-                                                                == [n1, n2]:
-					        break
+			lkf = len(kept_face.nodes)
+			if n1 == kept_face.nodes[-1] and \
+						n2 == kept_face.nodes[0]:
+				kf_idx = lkf - 1
+			else:
+				for kf_idx in range(lkf):
+					if kept_face.nodes[kf_idx:kf_idx+2] \
+								== [n1, n2]:
+						break
 
-
-                        lof = len(other_face.nodes)
-                        if n2 == other_face.nodes[-1] and \
-                                                n1 == other_face.nodes[0]:
-                                of_idx = lof - 1
-                        else:
-        			for of_idx in range(lof):
-		        		if other_face.nodes[of_idx:of_idx+2] \
-                                                                == [n2, n1]:
-				        	break
+			lof = len(other_face.nodes)
+			if n2 == other_face.nodes[-1] and \
+						n1 == other_face.nodes[0]:
+				of_idx = lof - 1
+			else:
+				for of_idx in range(lof):
+					if other_face.nodes[of_idx:of_idx+2] \
+								== [n2, n1]:
+						break
 			of_idx = of_idx + 1
 
 			# Generate the new face node's list 
@@ -406,7 +397,6 @@ class openpg():
 	def print_info(self, verbose=False):
 		pp = pprint.PrettyPrinter(indent=2, depth=4)
 		print('Nodes = %d' % (self.graph.number_of_nodes()))
-                pp.pprint(self.graph.nodes()[:5])
 		print('Edges = %d' % (self.graph.number_of_edges()))
 		print('Faces = %d' % (len(self.faces)))
 		#if verbose:
