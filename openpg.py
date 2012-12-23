@@ -1,4 +1,5 @@
 import sys
+import pickle
 from collections import deque
 import pprint
 
@@ -65,6 +66,8 @@ class face:
 
 	def edges(self):
 		ret = []
+		if len(self.nodes) < 2:
+			return ret
 		for idx in range(len(self.nodes)-1):
 			ret.append((self.nodes[idx], self.nodes[idx+1]))
 		ret.append((self.nodes[-1],self.nodes[0]))
@@ -92,26 +95,25 @@ class openpg():
 	def __init__(self, data=None, name='', **attr):
 		self.graph = nx.DiGraph(data = data, name = name, **attr)
 		self.faces = []
+		self.name = name
 
 	def add_face(self, face):
 		""" Adds a face object to the graph """
 		face.G = self
 
-		for idx, n in enumerate(face.nodes[:-1]):
-			self.graph.add_edge(
-				face.nodes[idx], face.nodes[idx+1], face = face)
+		if len(face.nodes) > 0:
+			for idx, n in enumerate(face.nodes[:-1]):
+				self.graph.add_edge(
+					face.nodes[idx], face.nodes[idx+1], 
+					face = face)
 
-		self.graph.add_edge(face.nodes[-1], face.nodes[0], face = face)
+			self.graph.add_edge(face.nodes[-1], face.nodes[0], 
+					face = face)
 		self.faces.append(face)
 
 	def remove_face(self, face):
 		""" Removes a face object from the graph """
-		newfacelist = []
-		for f in self.faces:
-			if f is face:
-				continue
-			newfacelist.append(f)
-		self.faces = newfacelist
+		return self.faces.remove(face)
 
 	def outer_face(self):
 		""" Return the outer face """
@@ -258,10 +260,6 @@ class openpg():
 		new nodes as necessary
 		"""
 		hinfo,on = self._examine_hinge(hinge)
-
-		# Make sure we're a hinge
-		if len(hinfo) < 4:
-			return
 
 		new_face = face([],visible=False)
 
@@ -429,12 +427,4 @@ class openpg():
 		self._eliminate_hinges()
 		self._eliminate_bridges()
 		self._eliminate_pendents()
-
-if __name__ == '__main__':
-	import sys
-
-	G = load(sys.argv[1])
-	G.print_info()
-	print(G.hinges())
-	
 
