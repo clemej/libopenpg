@@ -73,6 +73,16 @@ class face:
 		ret.append((self.nodes[-1],self.nodes[0]))
 		return ret
 
+	def copy(self):
+		return face(self.nodes, name=self.name, visible=self.visible,
+						outer=self.outer)
+
+	def equiv(self, other):
+		if other.nodes != self.nodes or other.visible != self.visible \
+					or other.outer != self.outer:
+			return False
+		return True
+
 class openpg():
 	""" 
 	A graph structure that implements an Open Planar Graph as

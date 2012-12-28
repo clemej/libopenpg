@@ -104,6 +104,9 @@ class test_openpg(unittest.TestCase):
 		self.assertFalse(
 			isomorphic.check_sphere_isomorphism(self.G3, self.G1))
 
+	def test_check_pattern_same(self):
+		self.G1.normalize()
+		self.assertTrue(isomorphic.check_pattern(self.G1, self.G1))
 
 	
 
