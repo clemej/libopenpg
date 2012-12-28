@@ -78,10 +78,19 @@ class face:
 						outer=self.outer)
 
 	def equiv(self, other):
-		if other.nodes != self.nodes or other.visible != self.visible \
-					or other.outer != self.outer:
+		if len(other.nodes) != len(self.nodes):
 			return False
-		return True
+	
+		samenodes = False
+		for i in range(len(self.nodes)):
+			if self.nodes == rotleft(other.nodes, i):
+				samenodes = True
+		
+		if samenodes and other.outer == self.outer and \
+						other.visible == self.visible:
+			return True
+
+		return False
 
 class openpg():
 	""" 
@@ -119,6 +128,7 @@ class openpg():
 
 			self.graph.add_edge(face.nodes[-1], face.nodes[0], 
 					face = face)
+
 		self.faces.append(face)
 
 	def remove_face(self, face):
@@ -382,7 +392,6 @@ class openpg():
 		pendents = [x for x in self.pendents() if not
 				self.graph[x][nx.neighbors(self.graph, x)[0]]\
 							['face'].visible]
-
 		while len(pendents) > 0:
 			p = pendents[0]
 			other = nx.neighbors(self.graph, p)[0]
@@ -437,4 +446,5 @@ class openpg():
 		self._eliminate_hinges()
 		self._eliminate_bridges()
 		self._eliminate_pendents()
+
 

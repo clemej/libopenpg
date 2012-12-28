@@ -119,12 +119,11 @@ def check_pattern(P, G):
 		if W <= visible_faces: # and W is contiguous
 			Gprime = openpg.openpg()
 			for face in G.faces:
-				Gprime.add_face(face.copy())
-			for face in Gprime.faces:
-				face.visible = False
-				for w in list(W):
-					if face.equiv(w):
-						face.visible = True
+				nface = face.copy()
+				Gprime.add_face(nface)
+				if face not in W:
+					nface.visible = False
+					
 			Gprime.normalize()
 			if check_plane_isomorphism(P, Gprime):
 				return True

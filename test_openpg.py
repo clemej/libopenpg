@@ -11,6 +11,7 @@ class test_openpg(unittest.TestCase):
 		self.G1 = example_graphs.example_graph1()
 		self.G2 = example_graphs.example_graph2()
 		self.G3 = example_graphs.example_graph3()
+		self.G4 = example_graphs.example_graph4()
 
 	def test_save_load(self):
 		openpg.save(self.G1, '/tmp/openpg_test.save')
@@ -107,6 +108,10 @@ class test_openpg(unittest.TestCase):
 	def test_check_pattern_same(self):
 		self.G1.normalize()
 		self.assertTrue(isomorphic.check_pattern(self.G1, self.G1))
+
+	def test_check_pattern_diff(self):
+		self.G4.normalize()
+		self.assertTrue(isomorphic.check_pattern(self.G4, self.G1))
 
 	
 
