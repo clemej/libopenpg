@@ -113,8 +113,11 @@ class test_openpg(unittest.TestCase):
 		self.G4.normalize()
 		self.assertTrue(isomorphic.check_pattern(self.G4, self.G1))
 
-	
-
+	def _0000test_contiguous_faces(self):
+		G1 = example_graphs.example_graph1()
+		g1 = list(G1.contiguous_visible_faces(G1.faces[1]))
+		print g1
+		self.assertTrue(len(g1) == 4)
 	
 
 if __name__ == '__main__':

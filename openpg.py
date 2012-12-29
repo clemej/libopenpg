@@ -92,6 +92,13 @@ class face:
 
 		return False
 
+	def adjacent(self):
+		ret = set()
+		for e in self.edges():
+			ret.add(self.G.graph[e[1]][e[0]]['face'])
+
+		return ret
+
 class openpg():
 	""" 
 	A graph structure that implements an Open Planar Graph as
@@ -138,6 +145,22 @@ class openpg():
 	def outer_face(self):
 		""" Return the outer face """
 		return [x for x in self.faces if x.outer][0]
+
+	def _adjacent_visible(self, face):
+		return {x for x in list(face.adjacent()) if x.visible}
+
+	def contiguous_visible_faces(self, face, ret=set()):
+		if not face.visible or face in ret:
+			return ret
+
+		ret.add(face)
+
+		newfaces = self._adjacent_visible(face)
+		for f in list(newfaces):
+			ret.update(self.contiguous_visible_faces(f, ret=ret))
+		
+		ret.update(newfaces)
+		return ret
 
 	def pendents(self):
 		""" Return all pendent nodes (regardless of visibility) """

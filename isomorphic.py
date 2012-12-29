@@ -116,7 +116,8 @@ def check_pattern(P, G):
 			W.add(G.graph[fa[0]][fa[1]]['face'])
 
 		visible_faces = {x for x in G.faces if x.visible}
-		if W <= visible_faces: # and W is contiguous
+		if W <= visible_faces and \
+				W<= G.contiguous_visible_faces(list(W)[0]):
 			Gprime = openpg.openpg()
 			for face in G.faces:
 				nface = face.copy()
