@@ -35,6 +35,49 @@ def save(graph, filename):
 	pickle.dump(graph, fd)
 	fd.close()
 
+def load_facefmt(filename, convfunc):
+	fd = open(filename, 'rb')
+
+	G = openpg()
+	for line in fd.readlines():
+		if line[0] == '#':
+			continue
+		if line[0].upper() == 'N':
+			G.name = line.split()[1]
+		if line[0].upper() == 'F':
+			visible = False
+			outer = False
+			finfo = line.split()
+			if 'outer' in finfo:
+				outer = True
+				finfo.remove('outer')
+			if 'visible' in finfo:
+				visible = True
+				finfo.remove('visible')
+			nodes = map(lambda x: convfunc(x), finfo[1:])
+
+			f = face(nodes, visible=visible, outer=outer)
+			G.add_face(f)
+			
+	fd.close()
+	return G
+
+def save_facefmt(graph, filename, convfunc):
+	fd = open(filename, 'wb')
+	if graph.name != '':
+		fd.write('N %s\n' % graph.name)
+	for face in graph.faces:
+		fd.write('F ')
+		for node in face.nodes:
+			fd.write('%s ' % convfunc(node))
+		if face.visible:
+			fd.write('visible ')
+		if face.outer:
+			fd.write('outer ')
+		fd.write('\n')
+	fd.close()
+
+
 def rotleft(l, n):
 	d = deque(l)
 	d.rotate(-n)

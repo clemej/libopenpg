@@ -19,6 +19,15 @@ class test_openpg(unittest.TestCase):
 		self.assertEqual(self.G1.name, g1.name)
 		self.assertEqual(len(self.G1.faces), len(g1.faces))
 
+	def test_save_load_facefmt(self):
+		openpg.save_facefmt(self.G1, '/tmp/openpg_test.save', 
+							lambda x: str(x))
+		g1 = openpg.load_facefmt('/tmp/openpg_test.save', 
+							lambda x: int(x))
+		self.assertEqual(self.G1.name, g1.name)
+		self.assertEqual(len(self.G1.faces), len(g1.faces))
+
+
 	def test_find_pendents(self):
 		g1 = self.G1.pendents()
 		self.assertEqual(len(g1),1)
