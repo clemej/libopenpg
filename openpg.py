@@ -2,7 +2,7 @@ import sys
 import pickle
 from collections import deque
 import pprint
-
+import traceback
 try:
 	import networkx as nx
 except:
@@ -103,6 +103,7 @@ class face:
 		self.nodes = nodeids
 		self.visible = visible
 		self.outer = outer
+		self.index = 0
 
 	def __repr__(self):
 		return 'Face(%s)(%s)' % (self.visible,self.nodes)
@@ -178,8 +179,18 @@ class openpg():
 
 			self.graph.add_edge(face.nodes[-1], face.nodes[0], 
 					face = face)
+			#print '--- added ', face.nodes[-1], face.nodes[0]
 
+		face.index = len(self.faces)
 		self.faces.append(face)
+
+	def dual(self):
+		dg = nx.Graph(name='%s-dual' % self.graph.name)
+		for face in self.faces:
+			for fadj in face.adjacent():
+				#if self.outer_face() not in [face, fadj]:
+					dg.add_edge(face, fadj)
+		return dg
 
 	def remove_face(self, face):
 		""" Removes a face object from the graph """
@@ -214,10 +225,21 @@ class openpg():
 		""" Return all bridge edges as list of (n1,n2) pairs """
 		ret = []
 		for edge in self.graph.edges_iter():
-			n1 = edge[0]
-			n2 = edge[1]
-			f1 = self.graph[n1][n2]['face']
-			f2 = self.graph[n2][n1]['face']
+			try:
+				n1 = edge[0]
+				n2 = edge[1]
+				f1 = self.graph[n1][n2]['face']
+				f2 = self.graph[n2][n1]['face']
+			except:
+				print("error in stuff and things")
+				print n1,n2,f1
+				print self.outer_face()
+				print self.graph.out_degree([n1])
+				print self.graph.out_degree([n2])
+				print self.graph.in_degree([n1])
+				print self.graph.in_degree([n2])
+				print traceback.format_exc()
+				raise Exception("error")
 
 			if f1 is not f2 and not f1.visible and not f2.visible:
 				# Needed to keep both edges in directed graph
