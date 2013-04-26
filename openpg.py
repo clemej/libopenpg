@@ -47,6 +47,7 @@ def load_facefmt(filename, convfunc):
 		if line[0].upper() == 'F':
 			visible = False
 			outer = False
+			labels = {}
 			finfo = line.split()
 			if 'outer' in finfo:
 				outer = True
@@ -54,9 +55,19 @@ def load_facefmt(filename, convfunc):
 			if 'visible' in finfo:
 				visible = True
 				finfo.remove('visible')
+			for e in finfo:
+				if not e.startswith('labels='):
+					continue
+				kvs = e.split('"')[1]
+				for ent in kvs.split(':'):
+					if not '=' in ent:
+						continue
+					k,v = ent.split('=')
+					labels[k] = v
+				finfo.remove(e)
 			nodes = map(lambda x: convfunc(x), finfo[1:])
 
-			f = face(nodes, visible=visible, outer=outer)
+			f = face(nodes, labels=labels, visible=visible, outer=outer)
 			G.add_face(f)
 			
 	fd.close()
@@ -64,12 +75,19 @@ def load_facefmt(filename, convfunc):
 
 def save_facefmt(graph, filename, convfunc):
 	fd = open(filename, 'wb')
+	fd.write('VERSION 2\n')
 	if graph.name != '':
 		fd.write('N %s\n' % graph.name)
 	for face in graph.faces:
 		fd.write('F ')
 		for node in face.nodes:
 			fd.write('%s ' % convfunc(node))
+		fd.write('labels="')
+		if len(face.labels.keys()) > 0:
+			#print face.labels
+			for k,v in face.labels.iteritems():
+				fd.write(str(k) + '=' + str(v) + ':')
+		fd.write('" ')	
 		if face.visible:
 			fd.write('visible ')
 		if face.outer:
@@ -96,7 +114,7 @@ class face:
 	space beyond the boundary of the graph.  Indicated with the 'outer'
 	attribute.
 	"""
-	def __init__(self, nodeids, name=None, G=None, 
+	def __init__(self, nodeids, name=None, G=None, labels={},
 						visible=False, outer=False):
 		self.name = name
 		self.G = G
@@ -104,6 +122,7 @@ class face:
 		self.visible = visible
 		self.outer = outer
 		self.index = 0
+		self.labels = labels
 
 	def __repr__(self):
 		return 'Face(%s)(%s)' % (self.visible,self.nodes)
@@ -118,8 +137,8 @@ class face:
 		return ret
 
 	def copy(self):
-		return face(self.nodes, name=self.name, visible=self.visible,
-						outer=self.outer)
+		return face(self.nodes, name=self.name, labels=self.labels, 
+				visible=self.visible, outer=self.outer)
 
 	def equiv(self, other):
 		if len(other.nodes) != len(self.nodes):
@@ -184,12 +203,16 @@ class openpg():
 		face.index = len(self.faces)
 		self.faces.append(face)
 
-	def dual(self):
+	def dual(self, labelfunc=None):
 		dg = nx.Graph(name='%s-dual' % self.graph.name)
 		for face in self.faces:
 			for fadj in face.adjacent():
 				#if self.outer_face() not in [face, fadj]:
-					dg.add_edge(face, fadj)
+				dg.add_edge(face, fadj)
+				if labelfunc:
+					x,y = labelfunc(face, fadj)
+					dg[face][fadj][x] = y
+
 		return dg
 
 	def remove_face(self, face):
