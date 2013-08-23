@@ -71,7 +71,7 @@ class test_openpg(unittest.TestCase):
 
 	def test_print_face(self):
 		f1 = openpg.face([], outer=True)
-		self.assertEqual(str(f1), 'Face(False)([])')
+		self.assertEqual(str(f1), 'Face(False)([]){}')
 
 	def test_face_edges_lessthan_2(self):
 		f1 = openpg.face([])

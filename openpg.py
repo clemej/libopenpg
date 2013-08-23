@@ -125,7 +125,7 @@ class face:
 		self.labels = labels
 
 	def __repr__(self):
-		return 'Face(%s)(%s)' % (self.visible,self.nodes)
+		return 'Face(%s)(%s)%s' % (self.visible,self.nodes,self.labels)
 
 	def edges(self):
 		ret = []

@@ -1,4 +1,5 @@
 import openpg
+import traceback
 import pprint
 
 def _check_lemma4(f, G, OG, check_outer=True):
@@ -26,7 +27,15 @@ def _check_lemma4(f, G, OG, check_outer=True):
 
 def _next(G, arc):
 	graph = G.graph
-	face = graph[arc[0]][arc[1]]['face']
+	try:
+		face = graph[arc[0]][arc[1]]['face']
+	except:
+		traceback.print_exc()
+		print G.print_info()
+		print arc[0],arc[1]
+		print graph[arc[0]]
+		print graph[arc[1]]
+		raise Exception('Booo.')
 	index = 0
 	for edge in face.edges():
 		if edge[0] == arc[0] and edge[1] == arc[1]:
@@ -126,6 +135,8 @@ def check_pattern(P, G):
 					nface.visible = False
 					
 			Gprime.normalize()
+			print 'GPrime: ', Gprime.print_info()
+
 			if check_plane_isomorphism(P, Gprime):
 				return True
 	return False
