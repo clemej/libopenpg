@@ -227,8 +227,12 @@ class openpg():
 		return {x for x in list(face.adjacent()) if x.visible}
 
 	def contiguous_visible_faces(self, face, ret=set()):
-		if not face.visible or face in ret:
+		if not face.visible:
 			return ret
+
+		for f in ret:
+			if face.equiv(f):
+				return ret
 
 		ret.add(face)
 
@@ -236,7 +240,7 @@ class openpg():
 		for f in list(newfaces):
 			ret.update(self.contiguous_visible_faces(f, ret=ret))
 		
-		ret.update(newfaces)
+		#ret.update(newfaces)
 		return ret
 
 	def pendents(self):

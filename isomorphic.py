@@ -110,6 +110,10 @@ def check_sphere_isomorphism(G, OG):
 	return False
 
 def check_pattern(P, G):
+	if len(P.faces) == len(G.faces):
+		if check_plane_isomorphism(P, G):
+			return True
+
 	parcs = [x for x in P.graph.edges_iter() if 
 			P.graph[x[0]][x[1]]['face'].visible]
 	arc0 = parcs[0]
@@ -126,17 +130,19 @@ def check_pattern(P, G):
 
 		visible_faces = {x for x in G.faces if x.visible}
 		if W <= visible_faces and \
-				W<= G.contiguous_visible_faces(list(W)[0]):
+				W <= G.contiguous_visible_faces(list(W)[0]):
 			Gprime = openpg.openpg()
 			for face in G.faces:
 				nface = face.copy()
 				Gprime.add_face(nface)
-				if face not in W:
+				found = False
+				for f in W:
+					if face.equiv(f):
+						found = True
+				if not found:
 					nface.visible = False
 					
 			Gprime.normalize()
-			print 'GPrime: ', Gprime.print_info()
-
 			if check_plane_isomorphism(P, Gprime):
 				return True
 	return False
