@@ -10,10 +10,11 @@ def _check_lemma4(f, G, OG, check_outer=True):
 		gnext = f[_next(G, k)]
 		ogopp = _opp(f[k])
 		gopp = f[_opp(k)]
-		if ognext[0] is not gnext[0] or ognext[1] is not gnext[1]:
+
+		if ognext[0] != gnext[0] or ognext[1] != gnext[1]:
 			return False
 
-		if ogopp[0] is not gopp[0] or ogopp[1] is not gopp[1]:
+		if ogopp[0] != gopp[0] or ogopp[1] != gopp[1]:
                         return False
 
 		if graph[k[0]][k[1]]['face'].visible != \

@@ -140,20 +140,41 @@ class face:
 		return face(self.nodes, name=self.name, labels=self.labels, 
 				visible=self.visible, outer=self.outer)
 
+	#
+	# To be equivelant, you must have the same label, you must 
+	# have the same number of nodes, your node labels must be 
+	# equal and in the right order, and your edge labels must be
+	# equal.  Also visible and outer must be identical. 
+	#
 	def equiv(self, other):
+		# check label
+		if self.labels != other.labels:
+			return False
+		if other.outer != self.outer and other.visible != self.visible:
+			return False
+		# check number of nodes
 		if len(other.nodes) != len(self.nodes):
 			return False
 	
+		# check that nodes are "equal", which in this case is up
+		# to the node object's __eq__ method. Scan through all
+		# possible 
 		samenodes = False
 		for i in range(len(self.nodes)):
 			if self.nodes == rotleft(other.nodes, i):
 				samenodes = True
-		
-		if samenodes and other.outer == self.outer and \
-						other.visible == self.visible:
-			return True
+				break
+	
+		if not samenodes:
+			return False
 
-		return False
+		se = [self.G.graph[e[0]][e[1]].get('label',None) for e in self.edges()]
+		oe = [other.G.graph[e[0]][e[1]].get('label',None) 
+					for e in rotleft(other.edges(),i)]
+		if se != oe:
+			return False
+
+		return True
 
 	def adjacent(self):
 		ret = set()
